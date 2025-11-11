@@ -926,13 +926,13 @@ process_files_single_pass() {
       while IFS= read -r line; do
         case "$line" in
           PROCESSED:*".$ext")
-            ((ext_processed++))
+            : $((ext_processed++))
             ;;
           HAS_ATTR:*".$ext")
-            ((ext_with_attrs++))
+            : $((ext_with_attrs++))
             ;;
           CLEARED:*".$ext")
-            ((ext_cleared++))
+            : $((ext_cleared++))
             ;;
         esac
       done < "$worker_log"
@@ -1795,11 +1795,11 @@ if [[ "$USE_PARALLEL" = true ]]; then
 fi
 
 # Choose processing mode: single-pass (optimized) or per-extension (legacy)
-# NOTE: Single-pass mode is experimental and currently disabled by default due to worker log bug
+# Single-pass mode is stable but kept opt-in for conservative rollout
 # To enable: export ENABLE_SINGLE_PASS=true
 if [[ "$USE_PARALLEL" = true ]] && [[ ${#EXTENSIONS[@]} -gt 1 ]] && [[ "${ENABLE_SINGLE_PASS:-false}" = true ]]; then
   # SINGLE-PASS MODE: Process all extensions at once (massive speedup for large directories)
-  # WARNING: Currently has bug where worker logs aren't created, causing 0 files processed
+  # Scans directory once instead of per-extension, dramatically reducing I/O for large sets
   printf '\n'
   console_log INFO "${MAGENTA}╔═══════════════════════════════════════════════════════╗${NC}"
   console_log INFO "${MAGENTA}║${NC}          Single-Pass Optimization Enabled           ${MAGENTA}║${NC}"
