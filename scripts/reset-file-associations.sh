@@ -28,30 +28,32 @@ TARGET_DIR=""
 EXTENSIONS=()
 
 # Resource limits (can be overridden by env vars or flags)
-MAX_FILES="${FILE_ASSOC_MAX_FILES:-10000}"        # Abort if more files found
-MAX_RATE="${FILE_ASSOC_MAX_RATE:-100}"            # Files per second
-MAX_MEMORY="${FILE_ASSOC_MAX_MEMORY:-500}"        # MB
-BATCH_SIZE="${FILE_ASSOC_BATCH_SIZE:-1000}"       # Files per batch
-BATCH_PAUSE="${FILE_ASSOC_BATCH_PAUSE:-1000}"     # ms between batches
-NICE_LEVEL="${FILE_ASSOC_NICE:-10}"               # Process priority (0-19)
+MAX_FILES="${FILE_ASSOC_MAX_FILES:-10000}"    # Abort if more files found
+MAX_RATE="${FILE_ASSOC_MAX_RATE:-100}"        # Files per second
+MAX_MEMORY="${FILE_ASSOC_MAX_MEMORY:-500}"    # MB
+BATCH_SIZE="${FILE_ASSOC_BATCH_SIZE:-1000}"   # Files per batch
+BATCH_PAUSE="${FILE_ASSOC_BATCH_PAUSE:-1000}" # ms between batches
+NICE_LEVEL="${FILE_ASSOC_NICE:-10}"           # Process priority (0-19)
 
 # Parallel processing (can be overridden by env vars or flags)
-WORKERS="${FILE_ASSOC_WORKERS:-0}"                # 0 = auto-detect CPU cores
-CHUNK_SIZE="${FILE_ASSOC_CHUNK_SIZE:-100}"        # Files per xargs chunk
-USE_PARALLEL="${FILE_ASSOC_USE_PARALLEL:-true}"   # Enable parallel processing
+WORKERS="${FILE_ASSOC_WORKERS:-0}"              # 0 = auto-detect CPU cores
+CHUNK_SIZE="${FILE_ASSOC_CHUNK_SIZE:-100}"      # Files per xargs chunk
+USE_PARALLEL="${FILE_ASSOC_USE_PARALLEL:-true}" # Enable parallel processing
 
 # Sampling configuration (can be overridden by env vars or flags)
-SAMPLE_SIZE="${FILE_ASSOC_SAMPLE_SIZE:-100}"      # Number of files to sample
-SKIP_SAMPLING=false                                # Skip sampling phase
-SAMPLE_THRESHOLD=0.05                              # Minimum hit rate to proceed (5%)
+SAMPLE_SIZE="${FILE_ASSOC_SAMPLE_SIZE:-100}" # Number of files to sample
+SKIP_SAMPLING=false                          # Skip sampling phase
+# shellcheck disable=SC2034  # Reserved for future auto-skip logic based on hit rate
+SAMPLE_THRESHOLD=0.05 # Minimum hit rate to proceed (5%)
 
 # Logging configuration
-LOG_LEVEL="${FILE_ASSOC_LOG_LEVEL:-INFO}"         # DEBUG, INFO, WARN, ERROR
+LOG_LEVEL="${FILE_ASSOC_LOG_LEVEL:-INFO}" # DEBUG, INFO, WARN, ERROR
 LOG_DIR="${HOME}/.dotfiles-logs"
 LOG_FILE=""
 LOG_BUFFER=()
 LOG_BUFFER_SIZE=100
-LOG_MAX_SIZE=$((10 * 1024 * 1024))                # 10MB
+# shellcheck disable=SC2034  # Reserved for future log rotation feature
+LOG_MAX_SIZE=$((10 * 1024 * 1024)) # 10MB
 LOG_KEEP_COUNT=5
 
 # Runtime state
@@ -109,7 +111,7 @@ init_logging() {
 # Rotate old log files
 rotate_logs() {
   local log_files
-  log_files=$(find "$LOG_DIR" -name "reset-file-associations-*.log" -type f 2>/dev/null | sort -r)
+  log_files=$(find "$LOG_DIR" -name "reset-file-associations-*.log" -type f 2> /dev/null | sort -r)
 
   # Exit early if no log files found
   if [[ -z "$log_files" ]]; then
@@ -130,16 +132,16 @@ rotate_logs() {
 
 # Get current timestamp in ISO8601 format (for log files)
 get_timestamp() {
-  date -u +"%Y-%m-%dT%H:%M:%S.%3NZ" 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%SZ"
+  date -u +"%Y-%m-%dT%H:%M:%S.%3NZ" 2> /dev/null || date -u +"%Y-%m-%dT%H:%M:%SZ"
 }
 
 # Get console timestamp (24-hour with milliseconds)
 get_console_timestamp() {
   # Try to get milliseconds if available, otherwise just use seconds
-  if command -v gdate >/dev/null 2>&1; then
+  if command -v gdate > /dev/null 2>&1; then
     # GNU date (if installed via brew)
     gdate +%H:%M:%S.%3N
-  elif date +%H:%M:%S.%N 2>/dev/null | grep -qv '%N'; then
+  elif date +%H:%M:%S.%N 2> /dev/null | grep -qv '%N'; then
     # If %N is supported, use it (Linux)
     date +%H:%M:%S.%3N
   else
@@ -230,7 +232,10 @@ log_debug() { log_message "DEBUG" "$1" "$2"; }
 log_info() { log_message "INFO" "$1" "$2"; }
 log_warn() { log_message "WARN" "$1" "$2"; }
 log_error() { log_message "ERROR" "$1" "$2"; }
-log_fatal() { log_message "FATAL" "$1" "$2"; flush_log_buffer; }
+log_fatal() {
+  log_message "FATAL" "$1" "$2"
+  flush_log_buffer
+}
 
 # ============================================================================
 # RESOURCE MONITORING
@@ -240,7 +245,7 @@ log_fatal() { log_message "FATAL" "$1" "$2"; flush_log_buffer; }
 get_memory_usage() {
   # Get RSS (Resident Set Size) in KB and convert to MB
   local rss_kb
-  rss_kb=$(ps -o rss= -p $SCRIPT_PID 2>/dev/null || echo "0")
+  rss_kb=$(ps -o rss= -p $SCRIPT_PID 2> /dev/null || echo "0")
   echo $((rss_kb / 1024))
 }
 
@@ -263,8 +268,8 @@ check_memory_limit() {
 
 # Set process priority
 set_process_priority() {
-  if command -v renice >/dev/null 2>&1; then
-    renice -n "$NICE_LEVEL" -p $SCRIPT_PID >/dev/null 2>&1 || true
+  if command -v renice > /dev/null 2>&1; then
+    renice -n "$NICE_LEVEL" -p $SCRIPT_PID > /dev/null 2>&1 || true
     log_info "PRIORITY" "Set nice level to $NICE_LEVEL"
   fi
 }
@@ -274,12 +279,12 @@ detect_cpu_cores() {
   local cores=1
 
   # Try various methods to detect CPU cores
-  if command -v nproc >/dev/null 2>&1; then
+  if command -v nproc > /dev/null 2>&1; then
     cores=$(nproc)
-  elif command -v sysctl >/dev/null 2>&1; then
-    cores=$(sysctl -n hw.ncpu 2>/dev/null || echo "1")
+  elif command -v sysctl > /dev/null 2>&1; then
+    cores=$(sysctl -n hw.ncpu 2> /dev/null || echo "1")
   elif [[ -f /proc/cpuinfo ]]; then
-    cores=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || echo "1")
+    cores=$(grep -c ^processor /proc/cpuinfo 2> /dev/null || echo "1")
   fi
 
   echo "$cores"
@@ -311,15 +316,15 @@ cleanup_and_exit() {
     [[ "$show_verbose" = true ]] && console_log INFO "Stopping quit monitor (PID: $QUIT_MONITOR_PID)..."
     stop_quit_monitor
     # Restore terminal to normal mode
-    stty sane 2>/dev/null || true
+    stty sane 2> /dev/null || true
     [[ "$show_verbose" = true ]] && console_log SUCCESS "Quit monitor stopped"
   fi
 
   # Stop progress monitor if running
   if [[ -n "$PROGRESS_MONITOR_PID" ]]; then
     [[ "$show_verbose" = true ]] && console_log INFO "Terminating progress monitor (PID: $PROGRESS_MONITOR_PID)..."
-    kill "$PROGRESS_MONITOR_PID" 2>/dev/null || true
-    wait "$PROGRESS_MONITOR_PID" 2>/dev/null || true
+    kill "$PROGRESS_MONITOR_PID" 2> /dev/null || true
+    wait "$PROGRESS_MONITOR_PID" 2> /dev/null || true
     [[ "$show_verbose" = true ]] && console_log SUCCESS "Progress monitor terminated"
     PROGRESS_MONITOR_PID=""
   fi
@@ -327,7 +332,8 @@ cleanup_and_exit() {
   # Kill any background worker processes
   if [[ -n "$TEMP_RESULTS_DIR" ]] && [[ -d "$TEMP_RESULTS_DIR" ]]; then
     [[ "$show_verbose" = true ]] && console_log INFO "Cleaning up temporary results..."
-    local worker_count=$(ls -1 "$TEMP_RESULTS_DIR"/worker-*.log 2>/dev/null | wc -l | tr -d ' ')
+    # shellcheck disable=SC2155  # Worker count calculation is non-critical for cleanup
+    local worker_count=$(find "$TEMP_RESULTS_DIR" -name "worker-*.log" -type f 2> /dev/null | wc -l | tr -d ' ')
     if [[ $worker_count -gt 0 ]]; then
       [[ "$show_verbose" = true ]] && console_log INFO "  Found ${worker_count} worker log files"
     fi
@@ -380,6 +386,7 @@ cleanup_and_exit() {
 }
 
 # Signal handler with verbose feedback
+# shellcheck disable=SC2329  # Called indirectly via trap in cleanup()
 handle_signal() {
   local sig=$1
 
@@ -418,22 +425,22 @@ start_quit_monitor() {
   (
     # Save terminal settings
     local old_tty_settings
-    old_tty_settings=$(stty -g 2>/dev/null)
+    old_tty_settings=$(stty -g 2> /dev/null)
 
     # Set terminal to raw mode for single character input
-    stty -echo -icanon time 0 min 0 2>/dev/null
+    stty -echo -icanon time 0 min 0 2> /dev/null
 
     while true; do
       # Read a single character with timeout
       local char
-      char=$(dd bs=1 count=1 2>/dev/null)
+      char=$(dd bs=1 count=1 2> /dev/null)
 
       if [[ "$char" = "q" ]] || [[ "$char" = "Q" ]]; then
         # Restore terminal settings
-        stty "$old_tty_settings" 2>/dev/null
+        stty "$old_tty_settings" 2> /dev/null
 
         # Send SIGTERM to main process
-        kill -TERM $$ 2>/dev/null
+        kill -TERM $$ 2> /dev/null
         exit 0
       fi
 
@@ -446,8 +453,8 @@ start_quit_monitor() {
 
 stop_quit_monitor() {
   if [[ -n "$QUIT_MONITOR_PID" ]]; then
-    kill "$QUIT_MONITOR_PID" 2>/dev/null || true
-    wait "$QUIT_MONITOR_PID" 2>/dev/null || true
+    kill "$QUIT_MONITOR_PID" 2> /dev/null || true
+    wait "$QUIT_MONITOR_PID" 2> /dev/null || true
     QUIT_MONITOR_PID=""
   fi
 }
@@ -464,8 +471,9 @@ trap 'handle_signal SIGQUIT' SIGQUIT
 # Sleep for throttling (in milliseconds)
 throttle_sleep() {
   local sleep_ms=$1
+  # shellcheck disable=SC2155  # Simple calculation, error unlikely
   local sleep_sec=$(awk "BEGIN {print $sleep_ms/1000}")
-  sleep "$sleep_sec" 2>/dev/null || sleep 1
+  sleep "$sleep_sec" 2> /dev/null || sleep 1
 }
 
 # Calculate and apply rate limiting
@@ -489,13 +497,14 @@ apply_batch_pause() {
     return
   fi
 
+  # shellcheck disable=SC2034  # batch_num reserved for future batch-specific logging
   local batch_num=$1
   if [[ $((total_files % BATCH_SIZE)) -eq 0 ]] && [[ $total_files -gt 0 ]]; then
     log_info "THROTTLE" "Batch pause after $total_files files"
     if [[ "$VERBOSE" = true ]]; then
       echo -e "\n${CYAN}Pausing between batches...${NC}"
     fi
-    throttle_sleep $BATCH_PAUSE
+    throttle_sleep "$BATCH_PAUSE"
   fi
 }
 
@@ -511,14 +520,14 @@ start_spinner() {
   local message=${1:-"Processing..."}
 
   # Hide cursor
-  tput civis 2>/dev/null || true
+  tput civis 2> /dev/null || true
 
   (
     local i=0
     while true; do
       local char="${SPINNER_CHARS:$i:1}"
       printf "\r${CYAN}%s${NC} %s" "$char" "$message"
-      i=$(( (i + 1) % ${#SPINNER_CHARS} ))
+      i=$(((i + 1) % ${#SPINNER_CHARS}))
       sleep 0.1
     done
   ) &
@@ -528,12 +537,12 @@ start_spinner() {
 
 stop_spinner() {
   if [[ -n "$SPINNER_PID" ]]; then
-    kill "$SPINNER_PID" 2>/dev/null || true
-    wait "$SPINNER_PID" 2>/dev/null || true
+    kill "$SPINNER_PID" 2> /dev/null || true
+    wait "$SPINNER_PID" 2> /dev/null || true
     SPINNER_PID=""
-    printf "\r%80s\r" ""  # Clear the line
+    printf "\r%80s\r" "" # Clear the line
     # Show cursor
-    tput cnorm 2>/dev/null || true
+    tput cnorm 2> /dev/null || true
   fi
 }
 
@@ -554,10 +563,10 @@ show_progress() {
 
   # Build progress bar
   local bar=""
-  for ((i=0; i<filled; i++)); do bar+="█"; done
+  for ((i = 0; i < filled; i++)); do bar+="█"; done
   if [[ $filled -lt $bar_width ]]; then
     bar+="▓"
-    for ((i=0; i<empty-1; i++)); do bar+="░"; done
+    for ((i = 0; i < empty - 1; i++)); do bar+="░"; done
   fi
 
   # Calculate rate based on batch start time (not global start time)
@@ -577,7 +586,7 @@ show_progress() {
 
   local eta_str="${eta}s"
   if [[ $eta -gt 60 ]]; then
-    eta_str="$((eta/60))m $((eta%60))s"
+    eta_str="$((eta / 60))m $((eta % 60))s"
   fi
 
   # Get timestamp for progress updates
@@ -628,10 +637,10 @@ collect_parallel_results() {
     local h
     local c
     local e
-    p=$(grep -c "^PROCESSED$" "$worker_log" 2>/dev/null || echo "0")
-    h=$(grep -c "^HAS_ATTR$" "$worker_log" 2>/dev/null || echo "0")
-    c=$(grep -c "^CLEARED$" "$worker_log" 2>/dev/null || echo "0")
-    e=$(grep -c "^ERROR$" "$worker_log" 2>/dev/null || echo "0")
+    p=$(grep -c "^PROCESSED$" "$worker_log" 2> /dev/null || echo "0")
+    h=$(grep -c "^HAS_ATTR$" "$worker_log" 2> /dev/null || echo "0")
+    c=$(grep -c "^CLEARED$" "$worker_log" 2> /dev/null || echo "0")
+    e=$(grep -c "^ERROR$" "$worker_log" 2> /dev/null || echo "0")
 
     # Trim whitespace and add to counters
     processed=$((processed + ${p//[[:space:]]/}))
@@ -651,18 +660,19 @@ collect_parallel_results() {
 
 # Worker function (processes a single file and writes results to temp files)
 # This will be called by xargs in parallel
+# shellcheck disable=SC2329  # Called indirectly via bash -c in process_files_parallel()
 process_file_worker() {
   local file=$1
   local results_dir=${TEMP_RESULTS_DIR:-/tmp}
   local worker_id=$$
 
   # Check if file has LaunchServices extended attribute
-  if xattr "$file" 2>/dev/null | grep -q "com.apple.LaunchServices.OpenWith"; then
+  if xattr "$file" 2> /dev/null | grep -q "com.apple.LaunchServices.OpenWith"; then
     echo "HAS_ATTR" >> "$results_dir/worker-$worker_id.log"
 
     # Clear the attribute (unless dry run)
     if [[ "${DRY_RUN:-false}" != "true" ]]; then
-      if xattr -d com.apple.LaunchServices.OpenWith "$file" 2>/dev/null; then
+      if xattr -d com.apple.LaunchServices.OpenWith "$file" 2> /dev/null; then
         echo "CLEARED" >> "$results_dir/worker-$worker_id.log"
       else
         echo "ERROR" >> "$results_dir/worker-$worker_id.log"
@@ -689,7 +699,7 @@ process_file() {
   apply_batch_pause $total_files
 
   # Check if file has LaunchServices extended attribute
-  if xattr "$file" 2>/dev/null | grep -q "com.apple.LaunchServices.OpenWith"; then
+  if xattr "$file" 2> /dev/null | grep -q "com.apple.LaunchServices.OpenWith"; then
     ((files_with_attrs++))
 
     log_debug "CHECK" "FILE=$file HAS_ATTR=true"
@@ -700,7 +710,7 @@ process_file() {
 
     # Clear the attribute (unless dry run)
     if [[ "$DRY_RUN" = false ]]; then
-      if xattr -d com.apple.LaunchServices.OpenWith "$file" 2>/dev/null; then
+      if xattr -d com.apple.LaunchServices.OpenWith "$file" 2> /dev/null; then
         ((files_cleared++))
         log_info "CLEAR" "FILE=$file RESULT=success"
 
@@ -739,7 +749,8 @@ monitor_parallel_progress() {
     shopt -s nullglob
     for worker_log in "$TEMP_RESULTS_DIR"/worker-*.log; do
       [[ -f "$worker_log" ]] || continue
-      local count=$(grep -c "^PROCESSED$" "$worker_log" 2>/dev/null || echo "0")
+      # shellcheck disable=SC2155  # Progress counting is non-critical, fallback to 0 on error
+      local count=$(grep -c "^PROCESSED$" "$worker_log" 2> /dev/null || echo "0")
       actual_progress=$((actual_progress + count))
     done
     shopt -u nullglob
@@ -774,7 +785,7 @@ monitor_parallel_progress() {
       break
     fi
 
-    sleep 0.1  # Faster updates for smoother animation
+    sleep 0.1 # Faster updates for smoother animation
   done
 }
 
@@ -808,8 +819,9 @@ process_files_parallel() {
 
   # Process files in parallel
   # Use || true to prevent exit on xargs error
-  find "$TARGET_DIR" -type f -name "*.${ext}" -print0 2>/dev/null | \
-    xargs -0 -P "$WORKERS" -n "$CHUNK_SIZE" bash -c '
+  # shellcheck disable=SC2016  # Single quotes intentional, variables expanded by inner bash
+  find "$TARGET_DIR" -type f -name "*.${ext}" -print0 2> /dev/null \
+    | xargs -0 -P "$WORKERS" -n "$CHUNK_SIZE" bash -c '
       for file in "$@"; do
         process_file_worker "$file"
       done
@@ -827,8 +839,8 @@ process_files_parallel() {
 
   # Stop progress monitor (should already be done)
   if [[ -n "$PROGRESS_MONITOR_PID" ]]; then
-    kill "$PROGRESS_MONITOR_PID" 2>/dev/null || true
-    wait "$PROGRESS_MONITOR_PID" 2>/dev/null || true
+    kill "$PROGRESS_MONITOR_PID" 2> /dev/null || true
+    wait "$PROGRESS_MONITOR_PID" 2> /dev/null || true
     PROGRESS_MONITOR_PID=""
   fi
 
@@ -861,8 +873,8 @@ animate_spinner_for_scan() {
   while [[ -f "$running_file" ]]; do
     local count=0
     if [[ -f "$count_file" ]]; then
-      count=$(cat "$count_file" 2>/dev/null || echo "0")
-      count=${count:-0}  # Ensure count is never empty
+      count=$(cat "$count_file" 2> /dev/null || echo "0")
+      count=${count:-0} # Ensure count is never empty
     fi
 
     local timestamp
@@ -870,7 +882,7 @@ animate_spinner_for_scan() {
     local char="${spinner_chars:$spinner_i:1}"
     printf "\r${CYAN}[%s]${NC} ${CYAN}[INFO ]${NC} ${CYAN}%s${NC} Scanning ${YELLOW}.%s${NC} files... ${GREEN}%d${NC} found" "$timestamp" "$char" "$ext" "$count" >&2
 
-    spinner_i=$(( (spinner_i + 1) % ${#spinner_chars} ))
+    spinner_i=$(((spinner_i + 1) % ${#spinner_chars}))
     sleep 0.15
   done
 }
@@ -882,6 +894,7 @@ count_files_for_extension() {
 
   if [[ "$show_progress" = true ]]; then
     # Create temp files for inter-process communication
+    # shellcheck disable=SC2155  # mktemp failure would be caught by subsequent file operations
     local count_file=$(mktemp "/tmp/scan_count_${ext}.XXXXX")
     local running_file="${count_file}.running"
     echo "0" > "$count_file"
@@ -896,11 +909,11 @@ count_files_for_extension() {
     while IFS= read -r file; do
       ((count++))
       echo "$count" > "$count_file"
-    done < <(find "$TARGET_DIR" -type f -name "*.${ext}" 2>/dev/null)
+    done < <(find "$TARGET_DIR" -type f -name "*.${ext}" 2> /dev/null)
 
     # Stop spinner animation
     rm -f "$running_file"
-    wait "$spinner_pid" 2>/dev/null || true
+    wait "$spinner_pid" 2> /dev/null || true
 
     # Final update with filled spinner (to stderr)
     local timestamp
@@ -914,7 +927,7 @@ count_files_for_extension() {
     echo "$count"
   else
     # Fast count without progress
-    find "$TARGET_DIR" -type f -name "*.${ext}" 2>/dev/null | wc -l | tr -d ' '
+    find "$TARGET_DIR" -type f -name "*.${ext}" 2> /dev/null | wc -l | tr -d ' '
   fi
 }
 
@@ -930,12 +943,12 @@ sample_files_for_extension() {
 
   # If sample size >= total files, just return all files
   if [[ $sample_size -ge $total_files ]]; then
-    find "$TARGET_DIR" -type f -name "*.${ext}" 2>/dev/null
+    find "$TARGET_DIR" -type f -name "*.${ext}" 2> /dev/null
     return
   fi
 
   # Use shuf to randomly sample files
-  find "$TARGET_DIR" -type f -name "*.${ext}" 2>/dev/null | shuf -n "$sample_size"
+  find "$TARGET_DIR" -type f -name "*.${ext}" 2> /dev/null | shuf -n "$sample_size"
 }
 
 # Analyze sample to calculate hit rate
@@ -982,12 +995,12 @@ analyze_sample() {
     # Update spinner
     if [[ $((sample_size_actual % 5)) -eq 0 ]]; then
       local char="${spinner_chars:$spinner_i:1}"
-      spinner_i=$(( (spinner_i + 1) % ${#spinner_chars} ))
+      spinner_i=$(((spinner_i + 1) % ${#spinner_chars}))
       printf "\r${CYAN}%s${NC} Checking sample... %d/%d files" "$char" "$sample_size_actual" "$SAMPLE_SIZE" >&2
     fi
 
     # Check for attribute
-    if xattr "$file" 2>/dev/null | grep -q "com.apple.LaunchServices.OpenWith"; then
+    if xattr "$file" 2> /dev/null | grep -q "com.apple.LaunchServices.OpenWith"; then
       ((sample_with_attr++))
     fi
   done < "$temp_sample_file"
@@ -1102,6 +1115,7 @@ record_extension_end() {
   EXTENSION_METRICS_END["$ext"]=$(get_timestamp_ms)
   EXTENSION_METRICS_FILES["$ext"]=$files
   EXTENSION_METRICS_WITH_ATTRS["$ext"]=$with_attrs
+  # shellcheck disable=SC2034  # EXTENSION_METRICS_CLEARED reserved for detailed reporting
   EXTENSION_METRICS_CLEARED["$ext"]=$cleared
 }
 
@@ -1132,10 +1146,12 @@ generate_performance_report() {
       total_duration_ms=$((total_duration_ms + duration_ms))
       total_files_processed=$((total_files_processed + files))
 
+      # shellcheck disable=SC2155  # Performance calculation, non-critical
       local duration_s=$(echo "scale=2; $duration_ms / 1000" | bc)
 
       local rate="0"
       if [[ $duration_ms -gt 0 ]] && [[ $files -gt 0 ]]; then
+        # shellcheck disable=SC2155  # Performance calculation, non-critical
         rate=$(echo "scale=1; $files * 1000 / $duration_ms" | bc)
       fi
 
@@ -1159,9 +1175,11 @@ generate_performance_report() {
   echo "------------------------------------------------------------"
 
   # Summary statistics
+  # shellcheck disable=SC2155  # Performance calculation, non-critical
   local total_duration_s=$(echo "scale=2; $total_duration_ms / 1000" | bc)
   local avg_rate="0"
   if [[ $total_duration_ms -gt 0 ]] && [[ $total_files_processed -gt 0 ]]; then
+    # shellcheck disable=SC2155  # Performance calculation, non-critical
     avg_rate=$(echo "scale=1; $total_files_processed * 1000 / $total_duration_ms" | bc)
   fi
 
@@ -1178,6 +1196,7 @@ generate_performance_report() {
 
     if [[ $files -gt 0 ]] && [[ $start_ms -gt 0 ]] && [[ $end_ms -gt 0 ]]; then
       local duration_ms=$((end_ms - start_ms))
+      # shellcheck disable=SC2155  # Top 5 calculation, non-critical
       local rate=$(echo "scale=1; $files * 1000 / $duration_ms" | bc)
       echo "$rate $ext"
     fi
@@ -1194,6 +1213,7 @@ generate_performance_report() {
 
     if [[ $files -gt 0 ]] && [[ $start_ms -gt 0 ]] && [[ $end_ms -gt 0 ]]; then
       local duration_ms=$((end_ms - start_ms))
+      # shellcheck disable=SC2155  # Top 5 calculation, non-critical
       local rate=$(echo "scale=1; $files * 1000 / $duration_ms" | bc)
       echo "$rate $ext"
     fi
@@ -1210,7 +1230,7 @@ generate_performance_report() {
 # ============================================================================
 
 usage() {
-  cat <<EOF
+  cat << EOF
 Usage: $(basename "$0") [OPTIONS] [DIRECTORY]
 
 Reset file associations for existing files by clearing LaunchServices extended attributes.
@@ -1307,15 +1327,15 @@ DEFAULT_EXTENSIONS=(
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
-    -d|--dry-run)
+    -d | --dry-run)
       DRY_RUN=true
       shift
       ;;
-    -v|--verbose)
+    -v | --verbose)
       VERBOSE=true
       shift
       ;;
-    -e|--ext)
+    -e | --ext)
       if [[ -z "${2:-}" ]]; then
         echo -e "${RED}Error: --ext requires an argument${NC}" >&2
         exit 1
@@ -1411,7 +1431,7 @@ while [[ $# -gt 0 ]]; do
       LOG_FILE=$2
       shift 2
       ;;
-    -p|--path)
+    -p | --path)
       if [[ -z "${2:-}" ]]; then
         echo -e "${RED}Error: --path requires an argument${NC}" >&2
         exit 1
@@ -1419,7 +1439,7 @@ while [[ $# -gt 0 ]]; do
       PATH_EXPLICIT="$2"
       shift 2
       ;;
-    -h|--help)
+    -h | --help)
       usage
       exit 0
       ;;
@@ -1444,7 +1464,6 @@ done
 # ============================================================================
 # MAIN LOGIC
 # ============================================================================
-
 
 # Set defaults
 # --path/-p takes precedence over positional argument
@@ -1511,7 +1530,7 @@ echo ""
 echo -e "${CYAN}Parallel Processing:${NC}"
 if [[ "$USE_PARALLEL" = true ]]; then
   echo -e "  ${GREEN}Enabled${NC}"
-  echo -e "  Workers: $WORKERS $([ $WORKERS -eq 0 ] && echo "(auto-detect)" || echo "")"
+  echo -e "  Workers: $WORKERS $([ "$WORKERS" -eq 0 ] && echo "(auto-detect)" || echo "")"
   echo -e "  Chunk size: $CHUNK_SIZE files"
 else
   echo -e "  ${YELLOW}Disabled (sequential mode)${NC}"
@@ -1626,7 +1645,7 @@ for ext in "${EXTENSIONS[@]}"; do
   # Use parallel processing if enabled, otherwise fall back to sequential
   if [[ "$USE_PARALLEL" = true ]]; then
     process_files_parallel "$ext"
-    printf "\r%150s\r" ""  # Clear any remaining progress output
+    printf "\r%150s\r" "" # Clear any remaining progress output
     console_log SUCCESS "Completed .$ext files"
   else
     # Sequential processing (legacy) with spinner
@@ -1636,10 +1655,10 @@ for ext in "${EXTENSIONS[@]}"; do
 
     while IFS= read -r -d '' file; do
       process_file "$file" "$ext"
-    done < <(find "$TARGET_DIR" -type f -name "*.${ext}" -print0 2>/dev/null)
+    done < <(find "$TARGET_DIR" -type f -name "*.${ext}" -print0 2> /dev/null)
 
     stop_spinner
-    printf "\r%150s\r" ""  # Clear any remaining progress output
+    printf "\r%150s\r" "" # Clear any remaining progress output
     console_log SUCCESS "Completed .$ext files"
   fi
 

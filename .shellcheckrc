@@ -1,0 +1,15 @@
+# ShellCheck Configuration
+# https://github.com/koalaman/shellcheck/wiki/Directive
+
+# Check as bash syntax (default shell)
+shell=bash
+
+# Follow sourced files
+external-sources=true
+
+# Look for sourced files in same directory as script
+source-path=SCRIPTDIR
+
+# Zero-tolerance policy: fix all warnings or document exceptions inline
+# NO global disables - use inline comments with explanation:
+#   # shellcheck disable=SCxxxx: Reason why this is safe/intentional

@@ -11,7 +11,7 @@ CONFIG_FILE="$FILE_ASSOC_ROOT/config/macos-file-associations.duti"
 
 # Show help if requested
 if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "help" ]]; then
-    cat << 'EOF'
+  cat << 'EOF'
 file-assoc-setup - Apply macOS file associations
 
 USAGE:
@@ -57,23 +57,23 @@ SEE ALSO:
     duti --help               Underlying tool documentation
 
 EOF
-    exit 0
+  exit 0
 fi
 
 # Open configuration file if requested
 if [[ "${1:-}" == "--configure" ]] || [[ "${1:-}" == "-c" ]] || [[ "${1:-}" == "configure" ]]; then
-    if [[ ! -f "$CONFIG_FILE" ]]; then
-        echo "Error: Configuration file not found: $CONFIG_FILE" >&2
-        exit 1
-    fi
+  if [[ ! -f "$CONFIG_FILE" ]]; then
+    echo "Error: Configuration file not found: $CONFIG_FILE" >&2
+    exit 1
+  fi
 
-    echo "Configuration file: $CONFIG_FILE"
+  echo "Configuration file: $CONFIG_FILE"
 
-    # Detect editor preference
-    EDITOR="${EDITOR:-${VISUAL:-vim}}"
+  # Detect editor preference
+  EDITOR="${EDITOR:-${VISUAL:-vim}}"
 
-    # Open in editor
-    exec "$EDITOR" "$CONFIG_FILE"
+  # Open in editor
+  exec "$EDITOR" "$CONFIG_FILE"
 fi
 
 cd "$FILE_ASSOC_ROOT"

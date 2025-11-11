@@ -1,9 +1,136 @@
 # macOS File Association Management
 # Standalone justfile for file-assoc tools
 
+# Color codes for output
+CYAN := '\033[0;36m'
+GREEN := '\033[0;32m'
+YELLOW := '\033[1;33m'
+RED := '\033[0;31m'
+NC := '\033[0m'  # No Color
+
 # Show available commands
 default:
     @just --list
+
+# ============================================================================
+# DEPENDENCY MANAGEMENT
+# ============================================================================
+
+# Install all dependencies via Homebrew
+install-deps:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo -e "{{CYAN}}📦 Installing dependencies...{{NC}}"
+    if ! command -v brew &>/dev/null; then
+        echo -e "{{RED}}❌ Homebrew not installed. Install from https://brew.sh{{NC}}"
+        exit 1
+    fi
+    brew bundle install
+    echo -e "{{GREEN}}✅ Dependencies installed{{NC}}"
+
+# Check if all required tools are installed
+check-deps:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo -e "{{CYAN}}🔍 Checking dependencies...{{NC}}"
+    MISSING=0
+    for tool in duti just shellcheck shfmt; do
+        if command -v "$tool" &>/dev/null; then
+            echo -e "{{GREEN}}✓{{NC}} $tool"
+        else
+            echo -e "{{RED}}✗{{NC}} $tool (missing)"
+            MISSING=1
+        fi
+    done
+    if [ $MISSING -eq 1 ]; then
+        echo ""
+        echo -e "{{YELLOW}}Install missing dependencies with: just install-deps{{NC}}"
+        exit 1
+    fi
+    echo -e "{{GREEN}}✅ All dependencies installed{{NC}}"
+
+# Update Brewfile from currently installed tools
+brewfile-update:
+    @echo -e "{{CYAN}}📦 Updating Brewfile...{{NC}}"
+    @brew bundle dump --force
+    @echo -e "{{GREEN}}✅ Brewfile updated{{NC}}"
+
+# ============================================================================
+# LINTING & FORMATTING
+# ============================================================================
+
+# Run shellcheck on all shell scripts
+lint:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo -e "{{CYAN}}🔍 Running shellcheck...{{NC}}"
+    if ! command -v shellcheck &>/dev/null; then
+        echo -e "{{RED}}❌ shellcheck not installed. Run: just install-deps{{NC}}"
+        exit 1
+    fi
+
+    ERRORS=0
+    for script in scripts/*.sh bin/*; do
+        if [ -f "$script" ] && head -1 "$script" | grep -q "^#!.*sh"; then
+            echo -e "{{CYAN}}Checking: $script{{NC}}"
+            if shellcheck "$script"; then
+                echo -e "{{GREEN}}✓ $script{{NC}}"
+            else
+                ERRORS=1
+            fi
+        fi
+    done
+
+    if [ $ERRORS -eq 1 ]; then
+        echo -e "{{RED}}❌ Shellcheck found issues{{NC}}"
+        exit 1
+    fi
+    echo -e "{{GREEN}}✅ All scripts passed shellcheck{{NC}}"
+
+# Format all shell scripts with shfmt
+format:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo -e "{{CYAN}}🎨 Formatting shell scripts...{{NC}}"
+    if ! command -v shfmt &>/dev/null; then
+        echo -e "{{RED}}❌ shfmt not installed. Run: just install-deps{{NC}}"
+        exit 1
+    fi
+
+    # Format with: 2-space indent, binary ops on next line, case indent, space redirects
+    shfmt -w -i 2 -bn -ci -sr scripts/*.sh bin/*
+    echo -e "{{GREEN}}✅ Scripts formatted{{NC}}"
+
+# Check formatting without modifying files
+format-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo -e "{{CYAN}}🔍 Checking shell script formatting...{{NC}}"
+    if ! command -v shfmt &>/dev/null; then
+        echo -e "{{RED}}❌ shfmt not installed. Run: just install-deps{{NC}}"
+        exit 1
+    fi
+
+    if shfmt -d -i 2 -bn -ci -sr scripts/*.sh bin/*; then
+        echo -e "{{GREEN}}✅ All scripts properly formatted{{NC}}"
+    else
+        echo -e "{{RED}}❌ Some scripts need formatting. Run: just format{{NC}}"
+        exit 1
+    fi
+
+# Run all quality checks (lint + format-check)
+quality:
+    @echo -e "{{CYAN}}🎯 Running quality checks...{{NC}}"
+    @just lint
+    @just format-check
+    @echo -e "{{GREEN}}✅ All quality checks passed{{NC}}"
+
+# Alias: short form for quality
+q: quality
+
+# ============================================================================
+# FILE ASSOCIATION MANAGEMENT
+# ============================================================================
 
 # Apply system-wide file associations
 setup-file-associations:

@@ -16,14 +16,14 @@ FILE_ASSOC_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SCRIPT="$FILE_ASSOC_ROOT/scripts/reset-file-associations.sh"
 
 if [[ ! -x "$SCRIPT" ]]; then
-    echo "Error: Cannot find or execute $SCRIPT" >&2
-    exit 1
+  echo "Error: Cannot find or execute $SCRIPT" >&2
+  exit 1
 fi
 
 # Convert "help" subcommand to --help flag (like claude CLI)
 if [[ "${1:-}" == "help" ]]; then
-    shift
-    exec "$SCRIPT" --help "$@"
+  shift
+  exec "$SCRIPT" --help "$@"
 fi
 
 exec "$SCRIPT" "$@"

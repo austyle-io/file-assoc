@@ -1,0 +1,50 @@
+# EditorConfig: Consistent coding styles across editors
+# https://editorconfig.org
+
+root = true
+
+# Default settings for all files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Shell scripts
+[*.{sh,bash,zsh}]
+indent_style = space
+indent_size = 2
+shell_variant = bash
+binary_next_line = true        # shfmt: -bn (place binary operators on next line)
+switch_case_indent = true      # shfmt: -ci (indent case branches)
+space_redirects = true         # shfmt: -sr (space around redirects)
+
+# Markdown
+[*.md]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false  # Markdown uses trailing spaces for line breaks
+
+# YAML (config files)
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# JSON
+[*.json]
+indent_style = space
+indent_size = 2
+
+# Justfile
+[justfile,Justfile]
+indent_style = tab
+indent_size = 4
+
+# Makefile
+[Makefile,*.mk]
+indent_style = tab
+
+# BATS test files (for future test suite)
+[*.bats]
+indent_style = space
+indent_size = 2
