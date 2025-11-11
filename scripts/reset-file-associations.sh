@@ -790,6 +790,184 @@ monitor_parallel_progress() {
 }
 
 # Process files in parallel using xargs
+# Build find predicates for all extensions at once (single-pass optimization)
+build_find_predicates() {
+  local result=""
+  local first=true
+
+  for ext in "${EXTENSIONS[@]}"; do
+    ext="${ext#.}"
+
+    if [[ "$first" == true ]]; then
+      result="-name \\*.${ext}"
+      first=false
+    else
+      result="$result -o -name \\*.${ext}"
+    fi
+  done
+
+  printf '%s' "$result"
+}
+
+# Enhanced worker that tags output with extension
+# shellcheck disable=SC2329  # Called indirectly via bash -c in process_files_single_pass()
+process_file_worker_with_ext() {
+  local file=$1
+  local results_dir=${TEMP_RESULTS_DIR:-/tmp}
+  local worker_id=$$
+
+  # Check if file has LaunchServices extended attribute
+  if xattr "$file" 2> /dev/null | grep -q "com.apple.LaunchServices.OpenWith"; then
+    printf '%s\n' "HAS_ATTR:$file" >> "$results_dir/worker-$worker_id.log"
+
+    # Clear the attribute if not in dry-run mode
+    if [[ "$DRY_RUN" != true ]]; then
+      if xattr -d com.apple.LaunchServices.OpenWith "$file" 2> /dev/null; then
+        printf '%s\n' "CLEARED:$file" >> "$results_dir/worker-$worker_id.log"
+      else
+        printf '%s\n' "ERROR:$file" >> "$results_dir/worker-$worker_id.log"
+      fi
+    else
+      # In dry run, count as "would clear"
+      printf '%s\n' "CLEARED:$file" >> "$results_dir/worker-$worker_id.log"
+    fi
+  fi
+
+  # Always mark as processed (with filename for extension tracking)
+  printf '%s\n' "PROCESSED:$file" >> "$results_dir/worker-$worker_id.log"
+}
+
+# Process ALL files in a single pass (optimized for large directories)
+process_files_single_pass() {
+  console_log INFO "${MAGENTA}Single-pass mode:${NC} processing all ${#EXTENSIONS[@]} extensions simultaneously"
+
+  # Initialize metrics for all extensions
+  for ext in "${EXTENSIONS[@]}"; do
+    ext="${ext#.}"
+    record_extension_start "$ext"
+  done
+
+  # Create temp directory for results
+  TEMP_RESULTS_DIR=$(mktemp -d)
+  export TEMP_RESULTS_DIR
+
+  # Set batch start time
+  BATCH_START_TIME=$(date +%s)
+  export BATCH_START_TIME
+
+  # Build find command with all extension patterns
+  console_log INFO "Discovering and processing files in parallel..."
+  log_info "SINGLE_PASS" "Processing all extensions with $WORKERS workers"
+
+  # Build find predicate as array for proper argument handling
+  local find_args=()
+  local first=true
+  for ext in "${EXTENSIONS[@]}"; do
+    ext="${ext#.}"
+    if [[ "$first" == true ]]; then
+      find_args+=(-name "*.${ext}")
+      first=false
+    else
+      find_args+=(-o -name "*.${ext}")
+    fi
+  done
+
+  # Single find command for ALL files, process immediately
+  # Inline worker logic to avoid function export issues
+  find "$TARGET_DIR" -type f \( "${find_args[@]}" \) -print0 2> /dev/null \
+    | xargs -0 -P "$WORKERS" -n "$CHUNK_SIZE" sh -c '
+      results_dir="$1"
+      dry_run="$2"
+      shift 2
+      for file in "$@"; do
+        worker_id=$$
+
+        # Check if file has LaunchServices extended attribute
+        if xattr "$file" 2>/dev/null | grep -q "com.apple.LaunchServices.OpenWith"; then
+          printf "%s\n" "HAS_ATTR:$file" >> "$results_dir/worker-$worker_id.log"
+
+          # Clear the attribute if not in dry-run mode
+          if [ "$dry_run" != "true" ]; then
+            if xattr -d com.apple.LaunchServices.OpenWith "$file" 2>/dev/null; then
+              printf "%s\n" "CLEARED:$file" >> "$results_dir/worker-$worker_id.log"
+            else
+              printf "%s\n" "ERROR:$file" >> "$results_dir/worker-$worker_id.log"
+            fi
+          else
+            printf "%s\n" "CLEARED:$file" >> "$results_dir/worker-$worker_id.log"
+          fi
+        fi
+
+        # Always mark as processed (with filename for extension tracking)
+        printf "%s\n" "PROCESSED:$file" >> "$results_dir/worker-$worker_id.log"
+      done
+    ' _ "$TEMP_RESULTS_DIR" "$DRY_RUN" || true
+
+  # Collect results per extension
+  console_log INFO "Aggregating per-extension statistics..."
+
+  local total_processed=0
+  local total_with_attrs=0
+  local total_cleared=0
+
+  for ext in "${EXTENSIONS[@]}"; do
+    ext="${ext#.}"
+
+    # Count files processed for this extension from worker logs
+    local ext_processed=0
+    local ext_with_attrs=0
+    local ext_cleared=0
+
+    shopt -s nullglob
+    for worker_log in "$TEMP_RESULTS_DIR"/worker-*.log; do
+      [[ -f "$worker_log" ]] || continue
+
+      # Count entries for this specific extension
+      while IFS= read -r line; do
+        case "$line" in
+          PROCESSED:*".$ext")
+            ((ext_processed++))
+            ;;
+          HAS_ATTR:*".$ext")
+            ((ext_with_attrs++))
+            ;;
+          CLEARED:*".$ext")
+            ((ext_cleared++))
+            ;;
+        esac
+      done < "$worker_log"
+    done
+    shopt -u nullglob
+
+    # Update global counters
+    total_processed=$((total_processed + ext_processed))
+    total_with_attrs=$((total_with_attrs + ext_with_attrs))
+    total_cleared=$((total_cleared + ext_cleared))
+
+    # Update metrics
+    EXTENSION_METRICS_FILES["$ext"]=$ext_processed
+    EXTENSION_METRICS_WITH_ATTRS["$ext"]=$ext_with_attrs
+    EXTENSION_METRICS_CLEARED["$ext"]=$ext_cleared
+    record_extension_end "$ext" "$ext_processed" "$ext_with_attrs" "$ext_cleared"
+
+    # Show per-extension results if files were found
+    if [[ $ext_processed -gt 0 ]]; then
+      console_log INFO "  ${CYAN}.$ext${NC}: $ext_processed files ($ext_with_attrs with attrs, $ext_cleared cleared)"
+    fi
+  done
+
+  # Update global stats
+  total_files=$total_processed
+  files_with_attrs=$total_with_attrs
+  files_cleared=$total_cleared
+
+  # Clean up
+  rm -rf "$TEMP_RESULTS_DIR"
+
+  console_log SUCCESS "Single-pass complete: processed $total_processed files across ${#EXTENSIONS[@]} extensions"
+}
+
+# Process files for extension in parallel (legacy per-extension mode)
 process_files_parallel() {
   local ext=$1
 
@@ -1616,54 +1794,72 @@ if [[ "$USE_PARALLEL" = true ]]; then
   }
 fi
 
-# Process each extension
-for ext in "${EXTENSIONS[@]}"; do
-  # Remove leading dot if present
-  ext="${ext#.}"
-
-  # Record metrics start
-  record_extension_start "$ext"
-
-  # Capture pre-extension counters
-  pre_with_attrs=$files_with_attrs
-  pre_cleared=$files_cleared
-
-  # Show section header
+# Choose processing mode: single-pass (optimized) or per-extension (legacy)
+# NOTE: Single-pass mode is experimental and currently disabled by default due to worker log bug
+# To enable: export ENABLE_SINGLE_PASS=true
+if [[ "$USE_PARALLEL" = true ]] && [[ ${#EXTENSIONS[@]} -gt 1 ]] && [[ "${ENABLE_SINGLE_PASS:-false}" = true ]]; then
+  # SINGLE-PASS MODE: Process all extensions at once (massive speedup for large directories)
+  # WARNING: Currently has bug where worker logs aren't created, causing 0 files processed
   printf '\n'
-  console_log INFO "${BLUE}━━━ Processing ${CYAN}.$ext${BLUE} files ━━━${NC}"
+  console_log INFO "${MAGENTA}╔═══════════════════════════════════════════════════════╗${NC}"
+  console_log INFO "${MAGENTA}║${NC}          Single-Pass Optimization Enabled           ${MAGENTA}║${NC}"
+  console_log INFO "${MAGENTA}╚═══════════════════════════════════════════════════════╝${NC}"
+  printf '\n'
 
-  log_info "EXTENSION" "Processing ext=$ext"
+  process_files_single_pass
 
-  # Count files for this extension
-  ext_file_count=$(count_files_for_extension "$ext" false)
+else
+  # PER-EXTENSION MODE: Process each extension separately (legacy behavior)
+  console_log INFO "Using per-extension mode (${#EXTENSIONS[@]} extension(s))"
 
-  # Use parallel processing if enabled, otherwise fall back to sequential
-  if [[ "$USE_PARALLEL" = true ]]; then
-    process_files_parallel "$ext"
-    printf "\r%150s\r" "" # Clear any remaining progress output
-    console_log SUCCESS "Completed .$ext files"
-  else
-    # Sequential processing (legacy) with spinner
-    if [[ $ext_file_count -gt 0 ]]; then
-      start_spinner "Processing $ext_file_count .$ext files (sequential mode)..."
+  for ext in "${EXTENSIONS[@]}"; do
+    # Remove leading dot if present
+    ext="${ext#.}"
+
+    # Record metrics start
+    record_extension_start "$ext"
+
+    # Capture pre-extension counters
+    pre_with_attrs=$files_with_attrs
+    pre_cleared=$files_cleared
+
+    # Show section header
+    printf '\n'
+    console_log INFO "${BLUE}━━━ Processing ${CYAN}.$ext${BLUE} files ━━━${NC}"
+
+    log_info "EXTENSION" "Processing ext=$ext"
+
+    # Count files for this extension
+    ext_file_count=$(count_files_for_extension "$ext" false)
+
+    # Use parallel processing if enabled, otherwise fall back to sequential
+    if [[ "$USE_PARALLEL" = true ]]; then
+      process_files_parallel "$ext"
+      printf "\r%150s\r" "" # Clear any remaining progress output
+      console_log SUCCESS "Completed .$ext files"
+    else
+      # Sequential processing (legacy) with spinner
+      if [[ $ext_file_count -gt 0 ]]; then
+        start_spinner "Processing $ext_file_count .$ext files (sequential mode)..."
+      fi
+
+      while IFS= read -r -d '' file; do
+        process_file "$file" "$ext"
+      done < <(find "$TARGET_DIR" -type f -name "*.${ext}" -print0 2> /dev/null)
+
+      stop_spinner
+      printf "\r%150s\r" "" # Clear any remaining progress output
+      console_log SUCCESS "Completed .$ext files"
     fi
 
-    while IFS= read -r -d '' file; do
-      process_file "$file" "$ext"
-    done < <(find "$TARGET_DIR" -type f -name "*.${ext}" -print0 2> /dev/null)
+    # Calculate per-extension metrics
+    ext_with_attrs=$((files_with_attrs - pre_with_attrs))
+    ext_cleared=$((files_cleared - pre_cleared))
 
-    stop_spinner
-    printf "\r%150s\r" "" # Clear any remaining progress output
-    console_log SUCCESS "Completed .$ext files"
-  fi
-
-  # Calculate per-extension metrics
-  ext_with_attrs=$((files_with_attrs - pre_with_attrs))
-  ext_cleared=$((files_cleared - pre_cleared))
-
-  # Record metrics end
-  record_extension_end "$ext" "$ext_file_count" "$ext_with_attrs" "$ext_cleared"
-done
+    # Record metrics end
+    record_extension_end "$ext" "$ext_file_count" "$ext_with_attrs" "$ext_cleared"
+  done
+fi
 
 # Clear progress line
 [[ "$VERBOSE" = true ]] && echo ""
