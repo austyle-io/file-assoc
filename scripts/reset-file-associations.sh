@@ -98,7 +98,7 @@ init_logging() {
 
   # Create log file
   touch "$LOG_FILE" || {
-    echo "Error: Cannot create log file: $LOG_FILE" >&2
+    printf '%s\n' "Error: Cannot create log file: $LOG_FILE" >&2
     exit 1
   }
 
@@ -189,7 +189,7 @@ console_log() {
       ;;
   esac
 
-  echo -e "${CYAN}[${timestamp}]${NC} ${level_color}[${level_label}]${NC} ${message}"
+  printf '%b\n' "${CYAN}[${timestamp}]${NC} ${level_color}[${level_label}]${NC} ${message}"
 }
 
 # Log message with level
@@ -245,8 +245,8 @@ log_fatal() {
 get_memory_usage() {
   # Get RSS (Resident Set Size) in KB and convert to MB
   local rss_kb
-  rss_kb=$(ps -o rss= -p $SCRIPT_PID 2> /dev/null || echo "0")
-  echo $((rss_kb / 1024))
+  rss_kb=$(ps -o rss= -p $SCRIPT_PID 2> /dev/null || printf '%s\n' "0")
+  printf '%s\n' "$((rss_kb / 1024))"
 }
 
 # Check if memory limit is exceeded
@@ -256,13 +256,13 @@ check_memory_limit() {
 
   if [[ $current_mb -gt $MAX_MEMORY ]]; then
     log_fatal "MEMORY" "LIMIT_EXCEEDED current=${current_mb}MB max=${MAX_MEMORY}MB"
-    echo -e "${RED}Error: Memory limit exceeded (${current_mb}MB > ${MAX_MEMORY}MB)${NC}" >&2
-    echo "See log: $LOG_FILE"
+    printf '%b\n' "${RED}Error: Memory limit exceeded (${current_mb}MB > ${MAX_MEMORY}MB)${NC}" >&2
+    printf '%s\n' "See log: $LOG_FILE"
     cleanup_and_exit 1
   fi
 
   if [[ "$VERBOSE" = true ]]; then
-    echo -ne "\r${CYAN}Memory: ${current_mb}MB / ${MAX_MEMORY}MB${NC}  "
+    printf '%b' "\r${CYAN}Memory: ${current_mb}MB / ${MAX_MEMORY}MB${NC}  "
   fi
 }
 
@@ -282,12 +282,12 @@ detect_cpu_cores() {
   if command -v nproc > /dev/null 2>&1; then
     cores=$(nproc)
   elif command -v sysctl > /dev/null 2>&1; then
-    cores=$(sysctl -n hw.ncpu 2> /dev/null || echo "1")
+    cores=$(sysctl -n hw.ncpu 2> /dev/null || printf '%s\n' "1")
   elif [[ -f /proc/cpuinfo ]]; then
-    cores=$(grep -c ^processor /proc/cpuinfo 2> /dev/null || echo "1")
+    cores=$(grep -c ^processor /proc/cpuinfo 2> /dev/null || printf '%s\n' "1")
   fi
 
-  echo "$cores"
+  printf '%s\n' "$cores"
 }
 
 # ============================================================================
@@ -300,7 +300,7 @@ cleanup_and_exit() {
   local show_verbose=${2:-false}
 
   if [[ "$show_verbose" = true ]]; then
-    echo ""
+    printf '\n'
     console_log INFO "${YELLOW}━━━ Cleanup Process ━━━${NC}"
   fi
 
@@ -364,11 +364,11 @@ cleanup_and_exit() {
 
   # Final summary
   if [[ $INTERRUPTED = true ]] || [[ "$show_verbose" = true ]]; then
-    echo ""
+    printf '\n'
     if [[ $INTERRUPTED = true ]]; then
-      echo -e "${YELLOW}╔═══════════════════════════════════════════════════════╗${NC}"
-      echo -e "${YELLOW}║${NC}             Operation Cancelled by User             ${YELLOW}║${NC}"
-      echo -e "${YELLOW}╚═══════════════════════════════════════════════════════╝${NC}"
+      printf '%b\n' "${YELLOW}╔═══════════════════════════════════════════════════════╗${NC}"
+      printf '%b\n' "${YELLOW}║${NC}             Operation Cancelled by User             ${YELLOW}║${NC}"
+      printf '%b\n' "${YELLOW}╚═══════════════════════════════════════════════════════╝${NC}"
     fi
     console_log INFO "${CYAN}Progress at shutdown:${NC}"
     console_log INFO "  Files scanned: ${total_files}"
@@ -377,7 +377,7 @@ cleanup_and_exit() {
     console_log INFO "  Errors: ${errors}"
     console_log INFO "  Duration: ${duration}s"
     console_log INFO "  Log: ${LOG_FILE}"
-    echo ""
+    printf '\n'
   fi
 
   [[ "$show_verbose" = true ]] && console_log SUCCESS "Cleanup complete, exiting..."
@@ -393,11 +393,11 @@ handle_signal() {
   # Clear the current line
   printf "\r%80s\r" ""
 
-  echo ""
-  echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  printf '\n'
+  printf '%b\n' "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
   console_log WARN "${RED}⚠  Signal Received: ${YELLOW}${sig}${NC}"
-  echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-  echo ""
+  printf '%b\n' "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  printf '\n'
   console_log WARN "${YELLOW}Initiating graceful shutdown...${NC}"
 
   log_warn "SIGNAL" "Received $sig, shutting down gracefully..."
@@ -502,7 +502,7 @@ apply_batch_pause() {
   if [[ $((total_files % BATCH_SIZE)) -eq 0 ]] && [[ $total_files -gt 0 ]]; then
     log_info "THROTTLE" "Batch pause after $total_files files"
     if [[ "$VERBOSE" = true ]]; then
-      echo -e "\n${CYAN}Pausing between batches...${NC}"
+      printf '%b\n' "\n${CYAN}Pausing between batches...${NC}"
     fi
     throttle_sleep "$BATCH_PAUSE"
   fi
@@ -637,10 +637,10 @@ collect_parallel_results() {
     local h
     local c
     local e
-    p=$(grep -c "^PROCESSED$" "$worker_log" 2> /dev/null || echo "0")
-    h=$(grep -c "^HAS_ATTR$" "$worker_log" 2> /dev/null || echo "0")
-    c=$(grep -c "^CLEARED$" "$worker_log" 2> /dev/null || echo "0")
-    e=$(grep -c "^ERROR$" "$worker_log" 2> /dev/null || echo "0")
+    p=$(grep -c "^PROCESSED$" "$worker_log" 2> /dev/null || printf '%s\n' "0")
+    h=$(grep -c "^HAS_ATTR$" "$worker_log" 2> /dev/null || printf '%s\n' "0")
+    c=$(grep -c "^CLEARED$" "$worker_log" 2> /dev/null || printf '%s\n' "0")
+    e=$(grep -c "^ERROR$" "$worker_log" 2> /dev/null || printf '%s\n' "0")
 
     # Trim whitespace and add to counters
     processed=$((processed + ${p//[[:space:]]/}))
@@ -668,19 +668,19 @@ process_file_worker() {
 
   # Check if file has LaunchServices extended attribute
   if xattr "$file" 2> /dev/null | grep -q "com.apple.LaunchServices.OpenWith"; then
-    echo "HAS_ATTR" >> "$results_dir/worker-$worker_id.log"
+    printf '%s\n' "HAS_ATTR" >> "$results_dir/worker-$worker_id.log"
 
     # Clear the attribute (unless dry run)
     if [[ "${DRY_RUN:-false}" != "true" ]]; then
       if xattr -d com.apple.LaunchServices.OpenWith "$file" 2> /dev/null; then
-        echo "CLEARED" >> "$results_dir/worker-$worker_id.log"
+        printf '%s\n' "CLEARED" >> "$results_dir/worker-$worker_id.log"
       else
-        echo "ERROR" >> "$results_dir/worker-$worker_id.log"
+        printf '%s\n' "ERROR" >> "$results_dir/worker-$worker_id.log"
       fi
     fi
   fi
 
-  echo "PROCESSED" >> "$results_dir/worker-$worker_id.log"
+  printf '%s\n' "PROCESSED" >> "$results_dir/worker-$worker_id.log"
 }
 
 # Legacy sequential processing function (kept for fallback)
@@ -705,7 +705,7 @@ process_file() {
     log_debug "CHECK" "FILE=$file HAS_ATTR=true"
 
     if [[ "$VERBOSE" = true ]] || [[ "$DRY_RUN" = true ]]; then
-      echo -e "  ${YELLOW}•${NC} $(basename "$file")"
+      printf '%b\n' "  ${YELLOW}•${NC} $(basename "$file")"
     fi
 
     # Clear the attribute (unless dry run)
@@ -715,12 +715,12 @@ process_file() {
         log_info "CLEAR" "FILE=$file RESULT=success"
 
         if [[ "$VERBOSE" = true ]]; then
-          echo -e "    ${GREEN}✓${NC} Cleared association"
+          printf '%b\n' "    ${GREEN}✓${NC} Cleared association"
         fi
       else
         ((errors++))
         log_error "CLEAR" "FILE=$file RESULT=failed ERROR=xattr_failed"
-        echo -e "    ${RED}✗${NC} Failed to clear association" >&2
+        printf '%b\n' "    ${RED}✗${NC} Failed to clear association" >&2
       fi
     fi
 
@@ -750,7 +750,7 @@ monitor_parallel_progress() {
     for worker_log in "$TEMP_RESULTS_DIR"/worker-*.log; do
       [[ -f "$worker_log" ]] || continue
       # shellcheck disable=SC2155  # Progress counting is non-critical, fallback to 0 on error
-      local count=$(grep -c "^PROCESSED$" "$worker_log" 2> /dev/null || echo "0")
+      local count=$(grep -c "^PROCESSED$" "$worker_log" 2> /dev/null || printf '%s\n' "0")
       actual_progress=$((actual_progress + count))
     done
     shopt -u nullglob
@@ -873,7 +873,7 @@ animate_spinner_for_scan() {
   while [[ -f "$running_file" ]]; do
     local count=0
     if [[ -f "$count_file" ]]; then
-      count=$(cat "$count_file" 2> /dev/null || echo "0")
+      count=$(cat "$count_file" 2> /dev/null || printf '%s\n' "0")
       count=${count:-0} # Ensure count is never empty
     fi
 
@@ -897,7 +897,7 @@ count_files_for_extension() {
     # shellcheck disable=SC2155  # mktemp failure would be caught by subsequent file operations
     local count_file=$(mktemp "/tmp/scan_count_${ext}.XXXXX")
     local running_file="${count_file}.running"
-    echo "0" > "$count_file"
+    printf '%s\n' "0" > "$count_file"
     touch "$running_file"
 
     # Start background spinner animation
@@ -908,7 +908,7 @@ count_files_for_extension() {
     local count=0
     while IFS= read -r file; do
       ((count++))
-      echo "$count" > "$count_file"
+      printf '%s\n' "$count" > "$count_file"
     done < <(find "$TARGET_DIR" -type f -name "*.${ext}" 2> /dev/null)
 
     # Stop spinner animation
@@ -924,7 +924,7 @@ count_files_for_extension() {
     rm -f "$count_file" "$running_file"
 
     # Return just the count (to stdout)
-    echo "$count"
+    printf '%s\n' "$count"
   else
     # Fast count without progress
     find "$TARGET_DIR" -type f -name "*.${ext}" 2> /dev/null | wc -l | tr -d ' '
@@ -1020,7 +1020,7 @@ analyze_sample() {
   log_info "SAMPLE" "sample_size=$sample_size_actual with_attr=$sample_with_attr hit_rate=${hit_rate}%"
 
   # Display results
-  echo "" >&2
+  printf '\n' >&2
   console_log SUCCESS "Sample analysis complete" >&2
   console_log INFO "  Sample size: ${sample_size_actual} files" >&2
   console_log INFO "  Files with custom associations: ${sample_with_attr}" >&2
@@ -1037,10 +1037,10 @@ analyze_sample() {
     console_log INFO "  Estimated files needing reset: ~${estimated_total}" >&2
   fi
 
-  echo "" >&2
+  printf '\n' >&2
 
   # Return hit rate for decision making
-  echo "$sample_with_attr $sample_size_actual"
+  printf '%s\n' "$sample_with_attr $sample_size_actual"
 }
 
 # Check if sampling indicates zero hit rate and prompt user
@@ -1058,8 +1058,7 @@ check_sampling_results() {
     console_log INFO "  • Full scan would likely find ${RED}0 files${NC} to modify"
     console_log INFO ""
     console_log INFO "Recommendation: ${GREEN}Skip full scan${NC} to save time (~10 seconds)"
-    echo ""
-
+    printf '\n'
     if [[ "$NO_CONFIRM" != true ]]; then
       read -rp "Continue with full scan anyway? (y/N) " response
       if [[ ! "$response" =~ ^[Yy]$ ]]; then
@@ -1067,12 +1066,12 @@ check_sampling_results() {
         log_info "SAMPLE" "User skipped full scan due to 0% hit rate"
 
         # Show what would have happened
-        echo ""
+        printf '\n'
         console_log INFO "If you had continued, the script would have:"
         console_log INFO "  • Scanned ${total_file_count} files"
         console_log INFO "  • Likely found 0 files with custom associations"
         console_log INFO "  • Taken approximately 10-15 seconds"
-        echo ""
+        printf '\n'
         console_log SUCCESS "Time saved: ~10-15 seconds ⚡"
 
         cleanup_and_exit 0
@@ -1121,15 +1120,14 @@ record_extension_end() {
 
 # Generate performance report
 generate_performance_report() {
-  echo ""
-  echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
-  echo -e "${CYAN}Performance Report${NC}"
-  echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
-  echo ""
-
+  printf '\n'
+  printf '%b\n' "${BLUE}═══════════════════════════════════════════════════════${NC}"
+  printf '%b\n' "${CYAN}Performance Report${NC}"
+  printf '%b\n' "${BLUE}═══════════════════════════════════════════════════════${NC}"
+  printf '\n'
   # Table header
   printf "${CYAN}%-16s %8s %8s %10s %8s${NC}\n" "Extension" "Files" "w/Attrs" "Duration" "Rate"
-  echo "------------------------------------------------------------"
+  printf '%s\n' "------------------------------------------------------------"
 
   local total_duration_ms=0
   local total_files_processed=0
@@ -1172,7 +1170,7 @@ generate_performance_report() {
     fi
   done
 
-  echo "------------------------------------------------------------"
+  printf '%s\n' "------------------------------------------------------------"
 
   # Summary statistics
   # shellcheck disable=SC2155  # Performance calculation, non-critical
@@ -1183,12 +1181,11 @@ generate_performance_report() {
     avg_rate=$(echo "scale=1; $total_files_processed * 1000 / $total_duration_ms" | bc)
   fi
 
-  echo ""
+  printf '\n'
   printf "${CYAN}%-16s %8d %8d %9.2fs %7s/s${NC}\n" "TOTAL" "$total_files_processed" "$files_with_attrs" "$total_duration_s" "$avg_rate"
-  echo ""
-
+  printf '\n'
   # Top 5 fastest/slowest
-  echo -e "${CYAN}Top 5 Fastest:${NC}"
+  printf '%b\n' "${CYAN}Top 5 Fastest:${NC}"
   for ext in "${EXTENSION_ORDER[@]}"; do
     local files=${EXTENSION_METRICS_FILES["$ext"]:-0}
     local start_ms=${EXTENSION_METRICS_START["$ext"]:-0}
@@ -1198,14 +1195,14 @@ generate_performance_report() {
       local duration_ms=$((end_ms - start_ms))
       # shellcheck disable=SC2155  # Top 5 calculation, non-critical
       local rate=$(echo "scale=1; $files * 1000 / $duration_ms" | bc)
-      echo "$rate $ext"
+      printf '%s\n' "$rate $ext"
     fi
   done | sort -rn | head -5 | while read -r rate ext; do
     printf "  ${GREEN}%-16s %7s files/s${NC}\n" ".$ext" "$rate"
   done
 
-  echo ""
-  echo -e "${CYAN}Top 5 Slowest:${NC}"
+  printf '\n'
+  printf '%b\n' "${CYAN}Top 5 Slowest:${NC}"
   for ext in "${EXTENSION_ORDER[@]}"; do
     local files=${EXTENSION_METRICS_FILES["$ext"]:-0}
     local start_ms=${EXTENSION_METRICS_START["$ext"]:-0}
@@ -1215,14 +1212,14 @@ generate_performance_report() {
       local duration_ms=$((end_ms - start_ms))
       # shellcheck disable=SC2155  # Top 5 calculation, non-critical
       local rate=$(echo "scale=1; $files * 1000 / $duration_ms" | bc)
-      echo "$rate $ext"
+      printf '%s\n' "$rate $ext"
     fi
   done | sort -n | head -5 | while read -r rate ext; do
     printf "  ${RED}%-16s %7s files/s${NC}\n" ".$ext" "$rate"
   done
 
-  echo ""
-  echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+  printf '\n'
+  printf '%b\n' "${BLUE}═══════════════════════════════════════════════════════${NC}"
 }
 
 # ============================================================================
@@ -1337,7 +1334,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     -e | --ext)
       if [[ -z "${2:-}" ]]; then
-        echo -e "${RED}Error: --ext requires an argument${NC}" >&2
+        printf '%b\n' "${RED}Error: --ext requires an argument${NC}" >&2
         exit 1
       fi
       EXTENSIONS+=("$2")
@@ -1345,7 +1342,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --max-files)
       if [[ -z "${2:-}" ]]; then
-        echo -e "${RED}Error: --max-files requires an argument${NC}" >&2
+        printf '%b\n' "${RED}Error: --max-files requires an argument${NC}" >&2
         exit 1
       fi
       MAX_FILES=$2
@@ -1353,7 +1350,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --max-rate)
       if [[ -z "${2:-}" ]]; then
-        echo -e "${RED}Error: --max-rate requires an argument${NC}" >&2
+        printf '%b\n' "${RED}Error: --max-rate requires an argument${NC}" >&2
         exit 1
       fi
       MAX_RATE=$2
@@ -1361,7 +1358,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --max-memory)
       if [[ -z "${2:-}" ]]; then
-        echo -e "${RED}Error: --max-memory requires an argument${NC}" >&2
+        printf '%b\n' "${RED}Error: --max-memory requires an argument${NC}" >&2
         exit 1
       fi
       MAX_MEMORY=$2
@@ -1369,7 +1366,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --batch-size)
       if [[ -z "${2:-}" ]]; then
-        echo -e "${RED}Error: --batch-size requires an argument${NC}" >&2
+        printf '%b\n' "${RED}Error: --batch-size requires an argument${NC}" >&2
         exit 1
       fi
       BATCH_SIZE=$2
@@ -1377,7 +1374,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --workers)
       if [[ -z "${2:-}" ]]; then
-        echo -e "${RED}Error: --workers requires an argument${NC}" >&2
+        printf '%b\n' "${RED}Error: --workers requires an argument${NC}" >&2
         exit 1
       fi
       WORKERS=$2
@@ -1385,7 +1382,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --chunk-size)
       if [[ -z "${2:-}" ]]; then
-        echo -e "${RED}Error: --chunk-size requires an argument${NC}" >&2
+        printf '%b\n' "${RED}Error: --chunk-size requires an argument${NC}" >&2
         exit 1
       fi
       CHUNK_SIZE=$2
@@ -1397,7 +1394,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --sample-size)
       if [[ -z "${2:-}" ]]; then
-        echo -e "${RED}Error: --sample-size requires an argument${NC}" >&2
+        printf '%b\n' "${RED}Error: --sample-size requires an argument${NC}" >&2
         exit 1
       fi
       SAMPLE_SIZE=$2
@@ -1417,7 +1414,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --log-level)
       if [[ -z "${2:-}" ]]; then
-        echo -e "${RED}Error: --log-level requires an argument${NC}" >&2
+        printf '%b\n' "${RED}Error: --log-level requires an argument${NC}" >&2
         exit 1
       fi
       LOG_LEVEL=$2
@@ -1425,7 +1422,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --log-file)
       if [[ -z "${2:-}" ]]; then
-        echo -e "${RED}Error: --log-file requires an argument${NC}" >&2
+        printf '%b\n' "${RED}Error: --log-file requires an argument${NC}" >&2
         exit 1
       fi
       LOG_FILE=$2
@@ -1433,7 +1430,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     -p | --path)
       if [[ -z "${2:-}" ]]; then
-        echo -e "${RED}Error: --path requires an argument${NC}" >&2
+        printf '%b\n' "${RED}Error: --path requires an argument${NC}" >&2
         exit 1
       fi
       PATH_EXPLICIT="$2"
@@ -1444,7 +1441,7 @@ while [[ $# -gt 0 ]]; do
       exit 0
       ;;
     -*)
-      echo -e "${RED}Error: Unknown option: $1${NC}" >&2
+      printf '%b\n' "${RED}Error: Unknown option: $1${NC}" >&2
       usage
       exit 1
       ;;
@@ -1452,7 +1449,7 @@ while [[ $# -gt 0 ]]; do
       if [[ -z "$TARGET_DIR" ]]; then
         TARGET_DIR="$1"
       else
-        echo -e "${RED}Error: Multiple directories specified${NC}" >&2
+        printf '%b\n' "${RED}Error: Multiple directories specified${NC}" >&2
         usage
         exit 1
       fi
@@ -1479,7 +1476,7 @@ fi
 
 # Validate directory
 if [[ ! -d "$TARGET_DIR" ]]; then
-  echo -e "${RED}Error: Directory not found: $TARGET_DIR${NC}" >&2
+  printf '%b\n' "${RED}Error: Directory not found: $TARGET_DIR${NC}" >&2
   exit 1
 fi
 
@@ -1496,14 +1493,14 @@ set_process_priority
 START_TIME=$(date +%s)
 
 # Banner (55 chars wide content area)
-echo -e "${BLUE}+-------------------------------------------------------+${NC}"
+printf '%b\n' "${BLUE}+-------------------------------------------------------+${NC}"
 printf "${BLUE}|${NC}%-55s${BLUE}|${NC}\n" "  Reset File Associations via Extended Attributes"
 printf "${BLUE}|${NC}%-55s${BLUE}|${NC}\n" "  Enhanced with Logging & Resource Management"
-echo -e "${BLUE}+-------------------------------------------------------+${NC}"
-echo ""
-echo -e "${YELLOW}Target:${NC} $TARGET_DIR"
-echo -e "${YELLOW}Mode:${NC} $([ "$DRY_RUN" = true ] && echo "DRY RUN (no changes)" || echo "LIVE (will modify files)")"
-echo -e "${YELLOW}Extensions:${NC}"
+printf '%b\n' "${BLUE}+-------------------------------------------------------+${NC}"
+printf '\n'
+printf '%b\n' "${YELLOW}Target:${NC} $TARGET_DIR"
+printf '%b\n' "${YELLOW}Mode:${NC} $([ "$DRY_RUN" = true ] && printf '%s\n' "DRY RUN (no changes)" || printf '%s\n' "LIVE (will modify files)")"
+printf '%b\n' "${YELLOW}Extensions:${NC}"
 # Format extensions into multiple lines (10 per line)
 ext_line=""
 ext_count=0
@@ -1511,32 +1508,31 @@ for ext in "${EXTENSIONS[@]}"; do
   ext_line+="$ext "
   ext_count=$((ext_count + 1))
   if [[ $ext_count -eq 10 ]]; then
-    echo -e "  $ext_line"
+    printf '%b\n' "  $ext_line"
     ext_line=""
     ext_count=0
   fi
 done
 # Print remaining extensions
-[[ -n "$ext_line" ]] && echo -e "  $ext_line"
-echo -e "${YELLOW}Log File:${NC} $LOG_FILE"
-echo ""
-echo -e "${CYAN}Resource Limits:${NC}"
-echo -e "  Max files: $MAX_FILES"
-echo -e "  Max rate: $MAX_RATE files/sec"
-echo -e "  Max memory: ${MAX_MEMORY}MB"
-echo -e "  Batch size: $BATCH_SIZE files"
-[[ "$NO_THROTTLE" = true ]] && echo -e "  ${RED}Throttling: DISABLED${NC}"
-echo ""
-echo -e "${CYAN}Parallel Processing:${NC}"
+[[ -n "$ext_line" ]] && printf '%b\n' "  $ext_line"
+printf '%b\n' "${YELLOW}Log File:${NC} $LOG_FILE"
+printf '\n'
+printf '%b\n' "${CYAN}Resource Limits:${NC}"
+printf '%b\n' "  Max files: $MAX_FILES"
+printf '%b\n' "  Max rate: $MAX_RATE files/sec"
+printf '%b\n' "  Max memory: ${MAX_MEMORY}MB"
+printf '%b\n' "  Batch size: $BATCH_SIZE files"
+[[ "$NO_THROTTLE" = true ]] && printf '%b\n' "  ${RED}Throttling: DISABLED${NC}"
+printf '\n'
+printf '%b\n' "${CYAN}Parallel Processing:${NC}"
 if [[ "$USE_PARALLEL" = true ]]; then
-  echo -e "  ${GREEN}Enabled${NC}"
-  echo -e "  Workers: $WORKERS $([ "$WORKERS" -eq 0 ] && echo "(auto-detect)" || echo "")"
-  echo -e "  Chunk size: $CHUNK_SIZE files"
+  printf '%b\n' "  ${GREEN}Enabled${NC}"
+  printf '%b\n' "  Workers: $WORKERS $([ "$WORKERS" -eq 0 ] && printf '%s\n' "(auto-detect)" || printf '')"
+  printf '%b\n' "  Chunk size: $CHUNK_SIZE files"
 else
-  echo -e "  ${YELLOW}Disabled (sequential mode)${NC}"
+  printf '%b\n' "  ${YELLOW}Disabled (sequential mode)${NC}"
 fi
-echo ""
-
+printf '\n'
 # Count total files with progressive feedback
 console_log INFO "Scanning directory for ${#EXTENSIONS[@]} file extensions..."
 log_info "SCAN" "Starting file count"
@@ -1549,7 +1545,7 @@ for ext in "${EXTENSIONS[@]}"; do
   log_info "SCAN" "EXTENSION=$ext COUNT=$count"
 done
 
-echo ""
+printf '\n'
 console_log SUCCESS "Scan complete: ${GREEN}$total_file_count${NC} total files found"
 log_info "SCAN" "TOTAL_FILES=$total_file_count"
 
@@ -1584,8 +1580,7 @@ fi
 
 # Sampling phase (unless skipped)
 if [[ "$SKIP_SAMPLING" = false ]] && [[ $total_file_count -ge 50 ]]; then
-  echo ""
-
+  printf '\n'
   # Run sampling analysis
   sampling_result=$(analyze_sample)
 
@@ -1604,10 +1599,10 @@ elif [[ $total_file_count -lt 50 ]]; then
   log_info "SAMPLE" "Sampling phase skipped due to small file count: $total_file_count"
 fi
 
-echo ""
+printf '\n'
 console_log INFO "Processing files..."
 console_log INFO "${MAGENTA}Tip:${NC} Press ${YELLOW}Ctrl+C${NC} or ${YELLOW}q${NC} at any time to cancel with graceful cleanup"
-echo ""
+printf '\n'
 log_info "PROCESS" "Starting file processing"
 
 # Start quit monitor for interactive cancellation
@@ -1634,7 +1629,7 @@ for ext in "${EXTENSIONS[@]}"; do
   pre_cleared=$files_cleared
 
   # Show section header
-  echo ""
+  printf '\n'
   console_log INFO "${BLUE}━━━ Processing ${CYAN}.$ext${BLUE} files ━━━${NC}"
 
   log_info "EXTENSION" "Processing ext=$ext"
@@ -1677,8 +1672,8 @@ done
 generate_performance_report
 
 # Final summary
-echo ""
-echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+printf '\n'
+printf '%b\n' "${BLUE}═══════════════════════════════════════════════════════${NC}"
 console_log SUCCESS "${GREEN}Summary:${NC}"
 console_log INFO "  Total files scanned: ${total_files}"
 console_log INFO "  Files with custom associations: ${files_with_attrs}"
@@ -1700,9 +1695,9 @@ console_log INFO "  Peak memory usage: ${end_memory}MB"
 duration=$(($(date +%s) - START_TIME))
 console_log INFO "  Duration: ${duration}s"
 
-echo ""
+printf '\n'
 console_log INFO "Log file: $LOG_FILE"
-echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+printf '%b\n' "${BLUE}═══════════════════════════════════════════════════════${NC}"
 
 # Cleanup and exit
 if [[ $errors -gt 0 ]]; then
