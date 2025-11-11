@@ -176,3 +176,28 @@ reset-file-associations-preview DIR=".":
 test:
     @echo "🧪 Testing file association reset (dry run)..."
     @just reset-file-associations-preview .
+
+# ============================================================================
+# PROJECT MANAGEMENT
+# ============================================================================
+
+# Setup GitHub project and issues for refactoring
+setup-github-project:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo -e "{{CYAN}}🚀 Setting up GitHub project for refactoring...{{NC}}"
+
+    if ! command -v gh &>/dev/null; then
+        echo -e "{{RED}}❌ gh CLI not installed. Install with: brew install gh{{NC}}"
+        exit 1
+    fi
+
+    if ! gh auth status &>/dev/null; then
+        echo -e "{{RED}}❌ Not authenticated. Run: gh auth login{{NC}}"
+        exit 1
+    fi
+
+    ./scripts/setup-github-project.sh
+    echo -e "{{GREEN}}✅ GitHub project setup complete!{{NC}}"
+    echo -e "{{CYAN}}View project: gh project list --owner austyle-io{{NC}}"
+    echo -e "{{CYAN}}View issues: gh issue list --label refactoring{{NC}}"
