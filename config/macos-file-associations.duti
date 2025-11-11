@@ -1,0 +1,85 @@
+# macOS File Association Configuration
+# Format: bundle_id  UTI/extension  role
+# Roles: all (default), editor, viewer, shell
+#
+# Apply with: duti config/macos-file-associations.duti
+# List current associations: duti -x <extension>
+#
+# Bundle ID for Cursor: com.todesktop.230313mzl4w4u92
+
+# Development Files - Cursor (primary editor)
+com.todesktop.230313mzl4w4u92  .json       all
+com.todesktop.230313mzl4w4u92  .jsonc      all
+com.todesktop.230313mzl4w4u92  .json5      all
+com.todesktop.230313mzl4w4u92  .yaml       all
+com.todesktop.230313mzl4w4u92  .yml        all
+com.todesktop.230313mzl4w4u92  .toml       all
+com.todesktop.230313mzl4w4u92  .md         all
+com.todesktop.230313mzl4w4u92  .markdown   all
+com.todesktop.230313mzl4w4u92  .txt        all
+com.todesktop.230313mzl4w4u92  .log        all
+
+# Shell Scripts - Cursor
+com.todesktop.230313mzl4w4u92  .sh         all
+com.todesktop.230313mzl4w4u92  .bash       all
+com.todesktop.230313mzl4w4u92  .zsh        all
+com.todesktop.230313mzl4w4u92  .fish       all
+com.todesktop.230313mzl4w4u92  public.shell-script  all
+
+# Programming Languages - Cursor
+com.todesktop.230313mzl4w4u92  .ts         all
+com.todesktop.230313mzl4w4u92  .tsx        all
+com.todesktop.230313mzl4w4u92  .js         all
+com.todesktop.230313mzl4w4u92  .jsx        all
+com.todesktop.230313mzl4w4u92  .mjs        all
+com.todesktop.230313mzl4w4u92  .cjs        all
+com.todesktop.230313mzl4w4u92  .py         all
+com.todesktop.230313mzl4w4u92  .rs         all
+com.todesktop.230313mzl4w4u92  .go         all
+com.todesktop.230313mzl4w4u92  .java       all
+com.todesktop.230313mzl4w4u92  .c          all
+com.todesktop.230313mzl4w4u92  .cpp        all
+com.todesktop.230313mzl4w4u92  .h          all
+com.todesktop.230313mzl4w4u92  .hpp        all
+com.todesktop.230313mzl4w4u92  .rb         all
+
+# Configuration Files - Cursor
+com.todesktop.230313mzl4w4u92  .env        all
+com.todesktop.230313mzl4w4u92  .envrc      all
+com.todesktop.230313mzl4w4u92  .gitignore  all
+com.todesktop.230313mzl4w4u92  .gitattributes  all
+com.todesktop.230313mzl4w4u92  .editorconfig  all
+com.todesktop.230313mzl4w4u92  .npmrc      all
+com.todesktop.230313mzl4w4u92  .bashrc     all
+com.todesktop.230313mzl4w4u92  .zshrc      all
+com.todesktop.230313mzl4w4u92  .vimrc      all
+
+# Justfile - Cursor (treated as Makefile syntax)
+com.todesktop.230313mzl4w4u92  justfile    all
+com.todesktop.230313mzl4w4u92  Justfile    all
+
+# Dotfiles and hidden configs - Cursor
+com.todesktop.230313mzl4w4u92  .cursorrules  all
+com.todesktop.230313mzl4w4u92  .cursorignore  all
+
+# Plain Text - Cursor
+com.todesktop.230313mzl4w4u92  public.plain-text  editor
+com.todesktop.230313mzl4w4u92  public.text  editor
+
+# CSV/TSV - Cursor (for viewing/editing)
+com.todesktop.230313mzl4w4u92  .csv        editor
+com.todesktop.230313mzl4w4u92  .tsv        editor
+
+# XML/SVG - Cursor (HTML excluded - system protected)
+com.todesktop.230313mzl4w4u92  .xml        all
+com.todesktop.230313mzl4w4u92  .svg        all
+
+# SQL - Cursor
+com.todesktop.230313mzl4w4u92  .sql        all
+
+# Docker - Cursor
+com.todesktop.230313mzl4w4u92  Dockerfile  all
+com.todesktop.230313mzl4w4u92  .dockerfile  all
+
+# Container and CI/CD configs - Cursor
+com.todesktop.230313mzl4w4u92  .dockerignore  all

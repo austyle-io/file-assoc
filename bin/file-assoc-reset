@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Wrapper script to reset per-file file associations from anywhere
+# Usage: file-assoc-reset [OPTIONS] [DIRECTORY]
+#
+# Examples:
+#   file-assoc-reset ~/Downloads
+#   file-assoc-reset --ext md --ext sh ~/Documents
+#   file-assoc-reset --dry-run --sample-size 100 .
+#   file-assoc-reset --help
+
+set -euo pipefail
+
+# Determine script location (works with symlinks)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FILE_ASSOC_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+SCRIPT="$FILE_ASSOC_ROOT/scripts/reset-file-associations.sh"
+
+if [[ ! -x "$SCRIPT" ]]; then
+    echo "Error: Cannot find or execute $SCRIPT" >&2
+    exit 1
+fi
+
+# Convert "help" subcommand to --help flag (like claude CLI)
+if [[ "${1:-}" == "help" ]]; then
+    shift
+    exec "$SCRIPT" --help "$@"
+fi
+
+exec "$SCRIPT" "$@"

@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# Wrapper script to apply macOS file associations from anywhere
+# Runs: just setup-file-associations
+
+set -euo pipefail
+
+# Determine script location (works with symlinks)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FILE_ASSOC_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+CONFIG_FILE="$FILE_ASSOC_ROOT/config/macos-file-associations.duti"
+
+# Show help if requested
+if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "help" ]]; then
+    cat << 'EOF'
+file-assoc-setup - Apply macOS file associations
+
+USAGE:
+    file-assoc-setup [OPTIONS]
+
+OPTIONS:
+    -h, --help, help         Show this help message
+    -c, --configure, configure
+                             Open configuration file in editor
+
+DESCRIPTION:
+    Applies system-wide file associations from the dotfiles configuration
+    using duti. This sets default applications for file types like .md, .sh,
+    .json, .ts, .js, etc.
+
+CONFIGURATION:
+    View path: file-assoc-setup configure
+    Edit file: file-assoc-setup --configure
+
+WHAT IT DOES:
+    • Checks if duti is installed (prompts to install if missing)
+    • Applies all file type → application mappings from config
+    • Sets system-wide defaults (affects all new files)
+    • Does NOT modify existing per-file overrides
+
+NEXT STEPS:
+    To remove per-file overrides and ensure system defaults are used:
+    file-assoc-reset [directory]
+
+EXAMPLES:
+    # Apply file associations
+    file-assoc-setup
+
+    # Edit configuration first
+    file-assoc-setup --configure
+    file-assoc-setup  # Apply after editing
+
+    # Complete workflow (setup + clear overrides)
+    file-assoc-setup && file-assoc-reset ~/Downloads
+
+SEE ALSO:
+    file-assoc-reset --help   Reset per-file overrides
+    duti --help               Underlying tool documentation
+
+EOF
+    exit 0
+fi
+
+# Open configuration file if requested
+if [[ "${1:-}" == "--configure" ]] || [[ "${1:-}" == "-c" ]] || [[ "${1:-}" == "configure" ]]; then
+    if [[ ! -f "$CONFIG_FILE" ]]; then
+        echo "Error: Configuration file not found: $CONFIG_FILE" >&2
+        exit 1
+    fi
+
+    echo "Configuration file: $CONFIG_FILE"
+
+    # Detect editor preference
+    EDITOR="${EDITOR:-${VISUAL:-vim}}"
+
+    # Open in editor
+    exec "$EDITOR" "$CONFIG_FILE"
+fi
+
+cd "$FILE_ASSOC_ROOT"
+exec just setup-file-associations
