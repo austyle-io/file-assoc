@@ -177,6 +177,24 @@ test:
     @echo "🧪 Testing file association reset (dry run)..."
     @just reset-file-associations-preview .
 
+# Run unit tests for library modules
+test-unit:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo -e "{{CYAN}}🧪 Running unit tests...{{NC}}"
+
+    # Run core library tests
+    if [ -f tests/test-core.sh ]; then
+        echo -e "{{CYAN}}Testing lib/core.sh...{{NC}}"
+        bash -c 'source lib/core.sh && source tests/test-core.sh && main'
+    fi
+
+    # Add more test modules as they are created
+    # bash -c 'source lib/ui.sh && source tests/test-ui.sh && main'
+    # bash -c 'source lib/files.sh && source tests/test-files.sh && main'
+
+    echo -e "{{GREEN}}✅ All unit tests completed{{NC}}"
+
 # ============================================================================
 # PROJECT MANAGEMENT
 # ============================================================================

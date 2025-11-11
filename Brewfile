@@ -8,6 +8,28 @@ brew "duti"
 # Task Runner
 brew "just"
 
+# ============================================================================
+# Modern Shell Scripting Tools (Phase 1: Foundation)
+# ============================================================================
+
+# Terminal UI Components
+brew "gum"          # Modern terminal UI toolkit by Charm
+
+# Parallel Processing
+brew "parallel"     # GNU Parallel for robust parallelization
+
+# Argument Parsing
+brew "argbash"      # Bash argument parser generator
+
+# Data Processing
+brew "jq"           # JSON processor and query language
+brew "yq"           # YAML/JSON/XML/TOML processor (mikefarah/yq)
+
+# Optional: Progress & Visual Enhancements
+brew "pv"           # Pipe Viewer for monitoring data through pipelines
+brew "figlet"       # ASCII art text generator
+brew "lolcat"       # Rainbow colorizer for output
+
 # Shell Linting & Formatting
 brew "shellcheck"  # Shell script linter
 brew "shfmt"       # Shell script formatter
