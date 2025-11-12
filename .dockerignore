@@ -1,0 +1,84 @@
+# .dockerignore - Exclude files from Docker build context
+# This speeds up builds by not sending unnecessary files to Docker daemon
+
+# Git
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.venv/
+venv/
+ENV/
+env/
+.python-version
+
+# uv
+.uv/
+uv.lock
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+tmp/
+
+# Documentation build
+docs/_build/
+site/
+
+# Node modules (if any)
+node_modules/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Homebrew
+Brewfile.lock.json
+
+# Project-specific
+# Keep these out of the build context if they're large or sensitive
+# Uncomment if needed:
+# config/*.duti
+# *.md

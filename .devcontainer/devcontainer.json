@@ -1,0 +1,166 @@
+{
+  "name": "file-assoc Development Container",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+
+  // Container configuration
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+
+  // Set environment variables
+  "containerEnv": {
+    "PYTHONUNBUFFERED": "1",
+    "UV_LINK_MODE": "copy",
+    "UV_PYTHON": "3.12",
+    "HOMEBREW_NO_AUTO_UPDATE": "1",
+    "HOMEBREW_NO_INSTALL_CLEANUP": "1"
+  },
+
+  // Remote user
+  "remoteUser": "vscode",
+
+  // Features (modern devcontainer approach)
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "installOhMyZsh": true,
+      "configureZshAsDefaultShell": true,
+      "username": "vscode",
+      "userUid": "1000",
+      "userGid": "1000"
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest",
+      "ppa": true
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    }
+  },
+
+  // VS Code specific settings
+  "customizations": {
+    "vscode": {
+      "settings": {
+        // Python settings
+        "python.defaultInterpreterPath": "/usr/bin/python3",
+        "python.analysis.typeCheckingMode": "basic",
+        "python.formatting.provider": "none",
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": false,
+        "python.linting.flake8Enabled": false,
+
+        // Shell script settings
+        "shellcheck.enable": true,
+        "shellcheck.executablePath": "/home/linuxbrew/.linuxbrew/bin/shellcheck",
+        "shellformat.path": "/home/linuxbrew/.linuxbrew/bin/shfmt",
+        "shellformat.flag": "-i 2 -bn -ci -sr",
+
+        // Editor settings
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "[shellscript]": {
+          "editor.defaultFormatter": "foxundermoon.shell-format"
+        },
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+          }
+        },
+        "[markdown]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+
+        // Terminal settings
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash",
+            "args": ["-l"]
+          },
+          "zsh": {
+            "path": "/bin/zsh",
+            "args": ["-l"]
+          }
+        },
+
+        // File associations
+        "files.associations": {
+          "*.m4": "shellscript",
+          "Brewfile*": "ruby",
+          "justfile": "makefile"
+        },
+
+        // Git settings
+        "git.enableCommitSigning": false,
+        "git.autofetch": true
+      },
+
+      // Extensions to install
+      "extensions": [
+        // Shell scripting
+        "timonwong.shellcheck",
+        "foxundermoon.shell-format",
+        "mads-hartmann.bash-ide-vscode",
+
+        // Python
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+
+        // General development
+        "esbenp.prettier-vscode",
+        "editorconfig.editorconfig",
+        "streetsidesoftware.code-spell-checker",
+
+        // Git
+        "eamodio.gitlens",
+        "github.vscode-pull-request-github",
+
+        // Markdown
+        "yzhang.markdown-all-in-one",
+        "davidanson.vscode-markdownlint",
+
+        // Justfile
+        "nefrob.vscode-just-syntax",
+
+        // Utilities
+        "formulahendry.code-runner",
+        "gruntfuggly.todo-tree"
+      ]
+    }
+  },
+
+  // Lifecycle scripts
+  "onCreateCommand": {
+    "install-deps": "echo 'Installing Homebrew packages...' && eval \"$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\" && brew bundle --file=Brewfile.linux --no-lock || echo 'Brewfile.linux not found or failed'",
+    "install-uv-tools": "uv --version && echo 'uv is ready!'"
+  },
+
+  "postCreateCommand": {
+    "welcome": "echo '✨ Development container ready!' && echo '📦 Python versions available:' && ls -1 /usr/bin/python3.* | grep -E 'python3\\.[0-9]+$' && echo '⚡ uv version:' && uv --version && echo '🍺 Homebrew version:' && eval \"$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\" && brew --version",
+    "generate-parser": "cd /workspace && if [ -f templates/reset-args.m4 ] && command -v argbash >/dev/null 2>&1; then echo '🔧 Generating argument parser...' && just generate-parser || echo '⚠️  Parser generation available via: just generate-parser'; fi"
+  },
+
+  "postStartCommand": "echo '🚀 Container started! Run \"just --list\" to see available commands.'",
+
+  // Forward ports (if needed)
+  "forwardPorts": [],
+
+  // Mount docker socket for docker-in-docker (optional)
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
+
+  // Configure tool-specific properties
+  "portsAttributes": {},
+
+  // Use 'postAttachCommand' to run commands after the container is created
+  "postAttachCommand": {
+    "env-check": "eval \"$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\" && echo '✅ Environment ready. Python:' $(python --version)"
+  }
+}

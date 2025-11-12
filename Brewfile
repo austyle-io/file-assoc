@@ -1,8 +1,19 @@
-# file-assoc Dependencies
+# file-assoc Dependencies (macOS)
 # Install with: brew bundle install
 # Update with: brew bundle dump --force
+#
+# Platform Note:
+#   - This Brewfile is optimized for macOS development
+#   - For Linux development containers, use: Brewfile.linux
+#   - Some packages (like duti) are macOS-specific
+#
+# See also: Brewfile.linux for Linux-specific packages
 
-# Core Requirement: duti for managing file associations
+# ============================================================================
+# macOS-SPECIFIC TOOLS
+# ============================================================================
+
+# Core Requirement: duti for managing file associations (macOS only)
 brew "duti"
 
 # Task Runner
