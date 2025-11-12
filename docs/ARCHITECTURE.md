@@ -2,7 +2,7 @@
 ## file-assoc - Modern Shell Scripting Architecture
 
 **Last Updated:** 2025-11-12
-**Status:** Phase 3 - Modular Extraction Complete
+**Status:** Phase 4 - Argument Parsing (Argbash Template Ready)
 
 ---
 
@@ -42,6 +42,11 @@ file-assoc/
 ├── scripts/
 │   ├── reset-file-associations.sh  # Main script (being refactored)
 │   └── setup-github-project.sh     # GitHub project automation
+│
+├── templates/                    # Code generation templates (NEW Phase 4)
+│   ├── reset-args.m4             # ✅ Argbash template for argument parsing
+│   ├── generate-parser.sh        # ✅ Parser generation script
+│   └── README.md                 # ✅ Template documentation
 │
 ├── tests/                        # Unit & integration tests (NEW)
 │   ├── test-core.sh             # ✅ Tests for lib/core.sh
@@ -740,6 +745,116 @@ just test-coverage
 
 ---
 
+## Argument Parsing
+
+### Argbash Template Approach (Phase 4)
+
+The project uses [Argbash](https://argbash.io/) to generate professional argument parsing code from declarative templates. This approach provides:
+
+- **Automatic Help Generation**: Self-documenting CLI with --help
+- **Type Validation**: Integer validation, enum checking
+- **Consistent Error Messages**: Professional error handling
+- **Reduced Boilerplate**: ~134 lines of manual parsing → generated code
+- **Maintainability**: Changes made in template, regenerate parser
+
+### Template Structure
+
+The Argbash template (`templates/reset-args.m4`) defines:
+
+**Boolean Flags**:
+- `--dry-run` / `-d`: Preview changes without making them
+- `--verbose` / `-v`: Detailed output with progress
+- `--no-throttle`: Disable rate limiting
+- `--no-confirm`: Skip confirmation prompts
+- `--no-parallel`: Use sequential processing
+- `--skip-sampling`: Skip pre-scan sampling
+
+**Single-Value Options**:
+- `--path` / `-p PATH`: Target directory
+- `--max-files N`: Maximum files limit (default: 10000)
+- `--max-rate N`: Rate limit (default: 100 files/s)
+- `--max-memory N`: Memory limit (default: 500MB)
+- `--batch-size N`: Batch size (default: 1000)
+- `--workers N`: Worker count (default: auto)
+- `--chunk-size N`: Chunk size (default: 100)
+- `--sample-size N`: Sample size (default: 100)
+- `--log-level LEVEL`: Log level (DEBUG, INFO, WARN, ERROR)
+- `--log-file PATH`: Custom log file path
+
+**Repeated Options**:
+- `--ext` / `-e EXT`: File extensions (repeatable)
+
+**Positional Arguments**:
+- `DIRECTORY`: Target directory (default: current directory)
+
+### Validation
+
+The template includes comprehensive validation:
+- Integer validation for all numeric options
+- Enum validation for log levels (DEBUG, INFO, WARN, ERROR)
+- Directory existence checks
+- Extension normalization (removes leading dots)
+- Conflict detection (--path vs positional directory)
+
+### Generating the Parser
+
+**Prerequisites**:
+```bash
+# Install argbash
+brew install argbash
+
+# Or install all dependencies
+brew bundle install
+```
+
+**Generate parser**:
+```bash
+# Using justfile
+just generate-parser
+
+# Or manually
+./templates/generate-parser.sh
+
+# Or with argbash directly
+argbash templates/reset-args.m4 -o lib/args-parser.sh
+```
+
+**Check if regeneration needed**:
+```bash
+just check-parser
+```
+
+### Integration
+
+Once generated, the parser is sourced by the main script:
+
+```bash
+#!/usr/bin/env bash
+# Source the generated argument parser
+source lib/args-parser.sh
+
+# Use parsed arguments
+echo "Target directory: $TARGET_DIR"
+echo "Dry run: $DRY_RUN"
+echo "Extensions: ${EXTENSIONS[@]}"
+```
+
+The parser exports all arguments as environment variables matching the main script's expectations.
+
+### Benefits Over Manual Parsing
+
+| Aspect | Manual Parsing | Argbash |
+|--------|---------------|---------|
+| Lines of code | ~134 lines | Template: ~200 lines (reusable) |
+| Help generation | Manual | Automatic |
+| Validation | Manual | Built-in |
+| Error messages | Custom | Consistent |
+| Type checking | Manual | Automatic |
+| Maintainability | Low | High |
+| Documentation | Separate | Self-documenting |
+
+---
+
 ## Dependencies
 
 ### Required (Runtime)
@@ -859,7 +974,23 @@ extensions:
 - ✅ Update justfile to run all tests
 - ✅ Update documentation
 
-### Phase 4-9: Integration & Enhancement (🚧 Next)
+### Phase 4: Argument Parsing with Argbash (✅ Template Ready)
+
+- ✅ Create Argbash template (templates/reset-args.m4)
+- ✅ Define all 18+ arguments and options with validation
+- ✅ Create parser generation script (templates/generate-parser.sh)
+- ✅ Add justfile recipes (generate-parser, check-parser)
+- ✅ Document template structure and usage
+- ⏳ Install argbash (requires: brew install argbash)
+- ⏳ Generate parser script (run after argbash install)
+- ⏳ Integrate into main script
+- ⏳ Test all argument combinations
+- ⏳ Remove manual argument parsing code
+
+**Note**: Argbash must be installed before parser can be generated.
+See `templates/README.md` for complete documentation.
+
+### Phase 5-9: Integration & Enhancement (🚧 Next)
 
 See [REFACTORING_PLAN.md](REFACTORING_PLAN.md) for complete timeline.
 
@@ -1010,6 +1141,6 @@ readonly MODULE_LOADED=true
 
 ---
 
-**Version:** 1.2.0
+**Version:** 1.3.0
 **Last Updated:** 2025-11-12
 **Status:** Living document - updated as architecture evolves

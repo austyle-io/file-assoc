@@ -129,6 +129,50 @@ quality:
 q: quality
 
 # ============================================================================
+# CODE GENERATION
+# ============================================================================
+
+# Generate argument parser from Argbash template
+generate-parser:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo -e "{{CYAN}}🔧 Generating argument parser...{{NC}}"
+
+    if ! command -v argbash &>/dev/null; then
+        echo -e "{{RED}}❌ argbash not installed{{NC}}"
+        echo ""
+        echo "Install argbash using one of these methods:"
+        echo "  1. brew install argbash"
+        echo "  2. brew bundle install  # Install all dependencies"
+        echo ""
+        exit 1
+    fi
+
+    ./templates/generate-parser.sh
+
+# Check if argument parser needs regeneration
+check-parser:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    TEMPLATE="templates/reset-args.m4"
+    PARSER="lib/args-parser.sh"
+
+    if [ ! -f "$PARSER" ]; then
+        echo -e "{{YELLOW}}⚠️  Argument parser not generated yet{{NC}}"
+        echo "   Run: just generate-parser"
+        exit 1
+    fi
+
+    if [ "$TEMPLATE" -nt "$PARSER" ]; then
+        echo -e "{{YELLOW}}⚠️  Template is newer than generated parser{{NC}}"
+        echo "   Run: just generate-parser"
+        exit 1
+    fi
+
+    echo -e "{{GREEN}}✅ Argument parser is up to date{{NC}}"
+
+# ============================================================================
 # FILE ASSOCIATION MANAGEMENT
 # ============================================================================
 
