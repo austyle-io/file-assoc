@@ -206,12 +206,47 @@ test-unit:
         fi
     fi
 
-    # Add more test modules as they are created
-    # if [ -f tests/test-files.sh ]; then
-    #     echo -e "{{CYAN}}Testing lib/files.sh...{{NC}}"
-    #     bash tests/test-files.sh 2>&1 | grep -v "readonly variable"
-    # fi
+    # Run logging library tests
+    if [ -f tests/test-logging.sh ]; then
+        echo -e "{{CYAN}}Testing lib/logging.sh...{{NC}}"
+        if bash tests/test-logging.sh 2>&1 | grep -v "readonly variable"; then
+            echo ""
+        else
+            TEST_FAILURES=$((TEST_FAILURES + 1))
+        fi
+    fi
 
+    # Run files library tests
+    if [ -f tests/test-files.sh ]; then
+        echo -e "{{CYAN}}Testing lib/files.sh...{{NC}}"
+        if bash tests/test-files.sh 2>&1 | grep -v "readonly variable"; then
+            echo ""
+        else
+            TEST_FAILURES=$((TEST_FAILURES + 1))
+        fi
+    fi
+
+    # Run xattr library tests
+    if [ -f tests/test-xattr.sh ]; then
+        echo -e "{{CYAN}}Testing lib/xattr.sh...{{NC}}"
+        if bash tests/test-xattr.sh 2>&1 | grep -v "readonly variable"; then
+            echo ""
+        else
+            TEST_FAILURES=$((TEST_FAILURES + 1))
+        fi
+    fi
+
+    # Run metrics library tests
+    if [ -f tests/test-metrics.sh ]; then
+        echo -e "{{CYAN}}Testing lib/metrics.sh...{{NC}}"
+        if bash tests/test-metrics.sh 2>&1 | grep -v "readonly variable"; then
+            echo ""
+        else
+            TEST_FAILURES=$((TEST_FAILURES + 1))
+        fi
+    fi
+
+    # Summary
     if [ $TEST_FAILURES -eq 0 ]; then
         echo -e "{{GREEN}}✅ All unit tests completed successfully{{NC}}"
     else
