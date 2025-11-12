@@ -37,6 +37,29 @@ This directory contains the development container (devcontainer) configuration f
 - Argument parser auto-generated on container creation (if template exists)
 - Shell environment configured with Homebrew and uv in PATH
 
+## Pre-Built Image
+
+A pre-built version of this devcontainer is available from GitHub Container Registry:
+
+```
+ghcr.io/austyle-io/file-assoc-devcontainer:latest
+```
+
+This image is automatically built and pushed when changes are made to the devcontainer configuration on the main branch.
+
+### Using the Pre-Built Image
+
+To use the pre-built image instead of building locally, you can modify `.devcontainer/devcontainer.json` to reference the image:
+
+```json
+{
+  "image": "ghcr.io/austyle-io/file-assoc-devcontainer:latest",
+  // ... rest of configuration
+}
+```
+
+However, the current configuration uses a local Dockerfile build, which allows for faster iteration during development.
+
 ## Usage
 
 ### Quick Start
@@ -387,6 +410,41 @@ just test-unit      # Run all unit tests
 - Sudo access for admin tasks
 - Isolated Homebrew installation
 
+## CI/CD Integration
+
+### GitHub Actions
+
+The repository includes a GitHub Actions workflow (`.github/workflows/build-devcontainer.yml`) that automatically:
+
+1. **Validates** the devcontainer configuration on every push and PR
+2. **Builds** the Docker image using Docker Buildx with caching
+3. **Pushes** to GitHub Container Registry (GHCR) on main branch
+4. **Tags** with latest, git sha, branch name, and date
+
+The workflow runs when changes are detected in:
+- `.devcontainer/**`
+- `Brewfile.linux`
+- `.dockerignore`
+- The workflow file itself
+
+### Manual Build and Push
+
+To manually build and push to GHCR:
+
+```bash
+# Login to GHCR
+echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
+
+# Build the image
+docker buildx build -t ghcr.io/austyle-io/file-assoc-devcontainer:latest \
+  -f .devcontainer/Dockerfile .
+
+# Push to registry
+docker push ghcr.io/austyle-io/file-assoc-devcontainer:latest
+```
+
+Note: You need `packages: write` permission in the repository.
+
 ## Resources
 
 - [Dev Containers Documentation](https://containers.dev/)
@@ -394,6 +452,7 @@ just test-unit      # Run all unit tests
 - [uv Documentation](https://docs.astral.sh/uv/)
 - [Homebrew on Linux](https://docs.brew.sh/Homebrew-on-Linux)
 - [argbash Documentation](https://argbash.readthedocs.io/)
+- [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
 
 ## Contributing
 
