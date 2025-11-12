@@ -182,18 +182,42 @@ test-unit:
     #!/usr/bin/env bash
     set -euo pipefail
     echo -e "{{CYAN}}🧪 Running unit tests...{{NC}}"
+    echo ""
+
+    TEST_FAILURES=0
 
     # Run core library tests
     if [ -f tests/test-core.sh ]; then
         echo -e "{{CYAN}}Testing lib/core.sh...{{NC}}"
-        bash -c 'source lib/core.sh && source tests/test-core.sh && main'
+        if bash -c 'source lib/core.sh && source tests/test-core.sh && main' 2>&1 | grep -v "readonly variable"; then
+            echo ""
+        else
+            TEST_FAILURES=$((TEST_FAILURES + 1))
+        fi
+    fi
+
+    # Run UI library tests
+    if [ -f tests/test-ui.sh ]; then
+        echo -e "{{CYAN}}Testing lib/ui.sh...{{NC}}"
+        if bash tests/test-ui.sh 2>&1 | grep -v "readonly variable"; then
+            echo ""
+        else
+            TEST_FAILURES=$((TEST_FAILURES + 1))
+        fi
     fi
 
     # Add more test modules as they are created
-    # bash -c 'source lib/ui.sh && source tests/test-ui.sh && main'
-    # bash -c 'source lib/files.sh && source tests/test-files.sh && main'
+    # if [ -f tests/test-files.sh ]; then
+    #     echo -e "{{CYAN}}Testing lib/files.sh...{{NC}}"
+    #     bash tests/test-files.sh 2>&1 | grep -v "readonly variable"
+    # fi
 
-    echo -e "{{GREEN}}✅ All unit tests completed{{NC}}"
+    if [ $TEST_FAILURES -eq 0 ]; then
+        echo -e "{{GREEN}}✅ All unit tests completed successfully{{NC}}"
+    else
+        echo -e "{{RED}}❌ $TEST_FAILURES test suite(s) failed{{NC}}"
+        exit 1
+    fi
 
 # ============================================================================
 # PROJECT MANAGEMENT

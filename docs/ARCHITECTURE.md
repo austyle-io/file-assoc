@@ -1,8 +1,8 @@
 # Architecture Documentation
 ## file-assoc - Modern Shell Scripting Architecture
 
-**Last Updated:** 2025-11-11
-**Status:** Phase 1 - Foundation Complete
+**Last Updated:** 2025-11-12
+**Status:** Phase 2 - UI Module Complete
 
 ---
 
@@ -30,7 +30,7 @@ file-assoc/
 │
 ├── lib/                          # Modular libraries (NEW in v2.0)
 │   ├── core.sh                  # ✅ Core utilities & platform detection
-│   ├── ui.sh                    # 🚧 Terminal UI (Gum integration)
+│   ├── ui.sh                    # ✅ Terminal UI (Gum integration)
 │   ├── logging.sh               # 🚧 Simplified logging
 │   ├── files.sh                 # 🚧 File discovery & operations
 │   ├── xattr.sh                 # 🚧 Extended attribute management
@@ -45,7 +45,7 @@ file-assoc/
 │
 ├── tests/                        # Unit & integration tests (NEW)
 │   ├── test-core.sh             # ✅ Tests for lib/core.sh
-│   ├── test-ui.sh               # 🚧 Tests for lib/ui.sh
+│   ├── test-ui.sh               # ✅ Tests for lib/ui.sh
 │   ├── test-files.sh            # 🚧 Tests for lib/files.sh
 │   └── fixtures/                # Test data
 │
@@ -180,43 +180,103 @@ echo "Took: $(format_duration $duration)"
 
 ---
 
-#### `lib/ui.sh` - Terminal UI (Gum Integration) 🚧
+#### `lib/ui.sh` - Terminal UI (Gum Integration) ✅
 
-**Status:** Planned (Phase 2)
-**Dependencies:** `gum` (installed via Brewfile)
+**Status:** Complete (Phase 2)
+**Lines:** ~534
+**Dependencies:** `gum` (optional, graceful fallback to ANSI codes)
+**Test Coverage:** 17/17 tests passing
 
 **Purpose:**
-Professional terminal UI using Gum. Replaces custom ANSI codes and progress bars with modern, consistent components.
+Professional terminal UI using Gum with graceful fallback to ANSI codes when Gum is unavailable. Provides modern, consistent UI components while maintaining backward compatibility with existing console_log patterns.
 
-**Planned Functions:**
+**Key Functions:**
 
 ```bash
-ui::init()           # Initialize UI system
-ui::header()         # Section headers
-ui::info()           # Info messages
-ui::success()        # Success messages
-ui::warn()           # Warning messages
-ui::error()          # Error messages
-ui::confirm()        # Yes/no confirmation (gum confirm)
-ui::spinner()        # Show spinner (gum spin)
-ui::progress()       # Progress bar
-ui::choose()         # Selection menu (gum choose)
-ui::input()          # Text input (gum input)
-ui::table()          # Format tables (gum table)
+# Initialization
+ui::init()           # Initialize UI system, detect Gum availability
+ui::has_gum()        # Check if Gum is available
+
+# Basic Output
+ui::header()         # Section headers with borders
+ui::info()           # Info messages with icon
+ui::success()        # Success messages with checkmark
+ui::warn()           # Warning messages with icon
+ui::error()          # Error messages to stderr
+ui::debug()          # Debug messages (respects VERBOSE)
+
+# Console Logging (Backward Compatible)
+ui::console_log()    # Timestamped logging (INFO, WARN, ERROR, SUCCESS, DEBUG)
+ui::get_timestamp()  # Get timestamp with milliseconds
+
+# Interactive Components
+ui::confirm()        # Yes/no confirmation (gum confirm or read fallback)
+ui::input()          # Text input with optional placeholder
+ui::choose()         # Selection menu from options
+
+# Spinners & Progress
+ui::spinner()        # Show spinner during command execution
+ui::start_spinner()  # Manual spinner control (start)
+ui::stop_spinner()   # Manual spinner control (stop)
+ui::progress()       # Progress bar with ETA calculation
+
+# Formatting
+ui::format()         # Format markdown (gum format or cat)
+ui::style()          # Style text with colors/formatting
+ui::table()          # Display tables (gum table or column)
+
+# Utilities
+ui::newline()        # Print blank line
+ui::divider()        # Print visual separator
+ui::clear_line()     # Clear current terminal line
 ```
 
 **Usage Example:**
 
 ```bash
+source lib/core.sh
 source lib/ui.sh
 
-ui::header "Processing Files"
-ui::info "Scanning directory..."
+# Initialize UI (detect Gum)
+ui::init
 
+# Display header
+ui::header "File Association Reset"
+
+# Basic output
+ui::info "Scanning directory..."
+ui::warn "This will affect 1000 files"
+
+# Confirmation
 if ui::confirm "Continue with reset?"; then
+  # Run command with spinner
   ui::spinner "Processing files" -- process_files
   ui::success "Complete!"
+else
+  ui::error "Operation cancelled"
 fi
+
+# Console logging (backward compatible)
+ui::console_log INFO "Starting batch operation"
+ui::console_log SUCCESS "Processed 100 files"
+
+# Progress tracking
+for i in {1..100}; do
+  ui::progress $i 100 "Processing"
+  # ... do work ...
+done
+```
+
+**Backward Compatibility:**
+
+The module provides legacy aliases for existing scripts:
+```bash
+# Legacy color constants (still work)
+echo "${RED}Error${NC}"
+echo "${GREEN}Success${NC}"
+
+# Legacy console_log alias
+console_log INFO "message"  # Same as ui::console_log INFO "message"
 ```
 
 ---
@@ -428,8 +488,8 @@ config::get_extensions()   # Get extension list
 ```
 tests/
 ├── test-core.sh          # ✅ Unit tests for lib/core.sh (24 tests)
-├── test-ui.sh           # 🚧 Unit tests for lib/ui.sh
-├── test-files.sh        # 🚧 Unit tests for lib/files.sh
+├── test-ui.sh            # ✅ Unit tests for lib/ui.sh (17 tests)
+├── test-files.sh         # 🚧 Unit tests for lib/files.sh
 ├── test-xattr.sh        # 🚧 Unit tests for lib/xattr.sh (macOS only)
 ├── test-parallel.sh     # 🚧 Unit tests for lib/parallel.sh
 ├── integration/         # 🚧 End-to-end tests
@@ -578,7 +638,16 @@ extensions:
 - ✅ Update Brewfile with new dependencies
 - ✅ Document architecture
 
-### Phase 2-9: Modular Extraction (🚧 In Progress)
+### Phase 2: UI Module with Gum Integration (✅ Complete)
+
+- ✅ Create lib/ui.sh with Gum integration
+- ✅ Implement graceful fallback to ANSI codes
+- ✅ Maintain backward compatibility with console_log
+- ✅ Create comprehensive test suite for ui.sh (17 tests)
+- ✅ Update justfile to run UI tests
+- ✅ Update documentation
+
+### Phase 3-9: Modular Extraction (🚧 Next)
 
 See [REFACTORING_PLAN.md](REFACTORING_PLAN.md) for complete timeline.
 
@@ -729,6 +798,6 @@ readonly MODULE_LOADED=true
 
 ---
 
-**Version:** 1.0.0
-**Last Updated:** 2025-11-11
+**Version:** 1.1.0
+**Last Updated:** 2025-11-12
 **Status:** Living document - updated as architecture evolves
