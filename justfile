@@ -129,6 +129,50 @@ quality:
 q: quality
 
 # ============================================================================
+# CODE GENERATION
+# ============================================================================
+
+# Generate argument parser from Argbash template
+generate-parser:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo -e "{{CYAN}}🔧 Generating argument parser...{{NC}}"
+
+    if ! command -v argbash &>/dev/null; then
+        echo -e "{{RED}}❌ argbash not installed{{NC}}"
+        echo ""
+        echo "Install argbash using one of these methods:"
+        echo "  1. brew install argbash"
+        echo "  2. brew bundle install  # Install all dependencies"
+        echo ""
+        exit 1
+    fi
+
+    ./templates/generate-parser.sh
+
+# Check if argument parser needs regeneration
+check-parser:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    TEMPLATE="templates/reset-args.m4"
+    PARSER="lib/args-parser.sh"
+
+    if [ ! -f "$PARSER" ]; then
+        echo -e "{{YELLOW}}⚠️  Argument parser not generated yet{{NC}}"
+        echo "   Run: just generate-parser"
+        exit 1
+    fi
+
+    if [ "$TEMPLATE" -nt "$PARSER" ]; then
+        echo -e "{{YELLOW}}⚠️  Template is newer than generated parser{{NC}}"
+        echo "   Run: just generate-parser"
+        exit 1
+    fi
+
+    echo -e "{{GREEN}}✅ Argument parser is up to date{{NC}}"
+
+# ============================================================================
 # FILE ASSOCIATION MANAGEMENT
 # ============================================================================
 
@@ -176,3 +220,105 @@ reset-file-associations-preview DIR=".":
 test:
     @echo "🧪 Testing file association reset (dry run)..."
     @just reset-file-associations-preview .
+
+# Run unit tests for library modules
+test-unit:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo -e "{{CYAN}}🧪 Running unit tests...{{NC}}"
+    echo ""
+
+    TEST_FAILURES=0
+
+    # Run core library tests
+    if [ -f tests/test-core.sh ]; then
+        echo -e "{{CYAN}}Testing lib/core.sh...{{NC}}"
+        if bash -c 'source lib/core.sh && source tests/test-core.sh && main' 2>&1 | grep -v "readonly variable"; then
+            echo ""
+        else
+            TEST_FAILURES=$((TEST_FAILURES + 1))
+        fi
+    fi
+
+    # Run UI library tests
+    if [ -f tests/test-ui.sh ]; then
+        echo -e "{{CYAN}}Testing lib/ui.sh...{{NC}}"
+        if bash tests/test-ui.sh 2>&1 | grep -v "readonly variable"; then
+            echo ""
+        else
+            TEST_FAILURES=$((TEST_FAILURES + 1))
+        fi
+    fi
+
+    # Run logging library tests
+    if [ -f tests/test-logging.sh ]; then
+        echo -e "{{CYAN}}Testing lib/logging.sh...{{NC}}"
+        if bash tests/test-logging.sh 2>&1 | grep -v "readonly variable"; then
+            echo ""
+        else
+            TEST_FAILURES=$((TEST_FAILURES + 1))
+        fi
+    fi
+
+    # Run files library tests
+    if [ -f tests/test-files.sh ]; then
+        echo -e "{{CYAN}}Testing lib/files.sh...{{NC}}"
+        if bash tests/test-files.sh 2>&1 | grep -v "readonly variable"; then
+            echo ""
+        else
+            TEST_FAILURES=$((TEST_FAILURES + 1))
+        fi
+    fi
+
+    # Run xattr library tests
+    if [ -f tests/test-xattr.sh ]; then
+        echo -e "{{CYAN}}Testing lib/xattr.sh...{{NC}}"
+        if bash tests/test-xattr.sh 2>&1 | grep -v "readonly variable"; then
+            echo ""
+        else
+            TEST_FAILURES=$((TEST_FAILURES + 1))
+        fi
+    fi
+
+    # Run metrics library tests
+    if [ -f tests/test-metrics.sh ]; then
+        echo -e "{{CYAN}}Testing lib/metrics.sh...{{NC}}"
+        if bash tests/test-metrics.sh 2>&1 | grep -v "readonly variable"; then
+            echo ""
+        else
+            TEST_FAILURES=$((TEST_FAILURES + 1))
+        fi
+    fi
+
+    # Summary
+    if [ $TEST_FAILURES -eq 0 ]; then
+        echo -e "{{GREEN}}✅ All unit tests completed successfully{{NC}}"
+    else
+        echo -e "{{RED}}❌ $TEST_FAILURES test suite(s) failed{{NC}}"
+        exit 1
+    fi
+
+# ============================================================================
+# PROJECT MANAGEMENT
+# ============================================================================
+
+# Setup GitHub project and issues for refactoring
+setup-github-project:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo -e "{{CYAN}}🚀 Setting up GitHub project for refactoring...{{NC}}"
+
+    if ! command -v gh &>/dev/null; then
+        echo -e "{{RED}}❌ gh CLI not installed. Install with: brew install gh{{NC}}"
+        exit 1
+    fi
+
+    if ! gh auth status &>/dev/null; then
+        echo -e "{{RED}}❌ Not authenticated. Run: gh auth login{{NC}}"
+        exit 1
+    fi
+
+    ./scripts/setup-github-project.sh
+    echo -e "{{GREEN}}✅ GitHub project setup complete!{{NC}}"
+    echo -e "{{CYAN}}View project: gh project list --owner austyle-io{{NC}}"
+    echo -e "{{CYAN}}View issues: gh issue list --label refactoring{{NC}}"

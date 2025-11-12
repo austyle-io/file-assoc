@@ -1,0 +1,102 @@
+# Brewfile.linux - Homebrew packages for Linux development environment
+# This file is specifically for Linux-based development containers and CI/CD
+#
+# Install with:
+#   brew bundle --file=Brewfile.linux
+#
+# Platform-specific note:
+#   This file complements the main Brewfile which is designed for macOS.
+#   Some packages differ between platforms or have Linux-specific requirements.
+
+# ============================================================================
+# SHELL SCRIPTING TOOLS
+# ============================================================================
+
+# Code quality
+brew "shellcheck"    # Shell script linter
+brew "shfmt"         # Shell script formatter
+
+# Modern shell scripting tools (Phase 1+)
+brew "gum"           # Modern terminal UI toolkit
+brew "parallel"      # GNU Parallel for concurrent processing
+brew "argbash"       # Bash argument parser generator ⭐ KEY DEPENDENCY
+brew "jq"            # JSON processor
+brew "yq"            # YAML processor
+
+# Additional utilities
+brew "pv"            # Pipe Viewer for progress monitoring
+brew "figlet"        # ASCII art text generator
+brew "lolcat"        # Rainbow colorizer for terminal output
+
+# ============================================================================
+# DEVELOPMENT TOOLS
+# ============================================================================
+
+# Task runner
+brew "just"          # Command runner (like make, but better)
+
+# Git tools
+brew "git"           # Version control (usually pre-installed, but ensure latest)
+brew "gh"            # GitHub CLI
+
+# Build tools
+brew "gcc"           # GNU Compiler Collection (for native extensions)
+
+# ============================================================================
+# OPTIONAL: PYTHON TOOLS (via Homebrew)
+# ============================================================================
+# Note: Python is primarily managed via uv/uvx in this container
+# Uncomment these if you need Homebrew-managed Python tools
+
+# brew "python@3.11"
+# brew "python@3.12"
+# brew "python@3.13"
+# brew "pipx"          # Install and run Python applications in isolated environments
+
+# ============================================================================
+# OPTIONAL: FILE ASSOCIATION TOOLS
+# ============================================================================
+# Note: duti is macOS-only and won't work on Linux
+# Equivalent functionality would need different tools
+
+# ============================================================================
+# LINUX-SPECIFIC ADDITIONS
+# ============================================================================
+
+# Text processing
+brew "bat"           # Better cat with syntax highlighting
+brew "ripgrep"       # Better grep (rg)
+brew "fd"            # Better find
+brew "fzf"           # Fuzzy finder
+
+# Performance monitoring
+brew "htop"          # Interactive process viewer
+brew "btop"          # Modern resource monitor
+
+# ============================================================================
+# DEVELOPMENT CONTAINER SPECIFIC
+# ============================================================================
+
+# Container tools (if needed for docker-in-docker)
+# brew "docker"      # Usually mounted from host
+# brew "docker-compose"
+
+# ============================================================================
+# NOTES
+# ============================================================================
+#
+# Platform Differences:
+# - duti: macOS only (file associations)
+# - Some GUI tools don't work in containers
+# - Linux may have different versions of some packages
+#
+# Performance:
+# - First install will take longer (compiling some packages)
+# - Subsequent installs use cached bottles when available
+#
+# Maintenance:
+# - Update packages: brew update && brew upgrade
+# - Check for issues: brew doctor
+# - Clean up: brew cleanup
+#
+# ============================================================================
