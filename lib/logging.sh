@@ -21,6 +21,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/core.sh"
 
 # Module version
+# Guard against multiple sourcing
+if [[ -n "${LOGGING_MODULE_VERSION:-}" ]]; then
+  return 0
+fi
+
 readonly LOG_MODULE_VERSION="1.0.0"
 
 # ============================================================================
@@ -162,42 +167,62 @@ log::flush() {
 
 # Log debug message
 # Arguments:
-#   $1 - Operation/component name
-#   $2 - Message
+#   $1 - Message (or component name if $2 provided)
+#   $2 - Message (optional, if provided $1 is component name)
 log::debug() {
-  log::write "DEBUG" "$1" "$2"
+  if [[ $# -eq 1 ]]; then
+    log::write "DEBUG" "MAIN" "$1"
+  else
+    log::write "DEBUG" "$1" "$2"
+  fi
 }
 
 # Log info message
 # Arguments:
-#   $1 - Operation/component name
-#   $2 - Message
+#   $1 - Message (or component name if $2 provided)
+#   $2 - Message (optional, if provided $1 is component name)
 log::info() {
-  log::write "INFO" "$1" "$2"
+  if [[ $# -eq 1 ]]; then
+    log::write "INFO" "MAIN" "$1"
+  else
+    log::write "INFO" "$1" "$2"
+  fi
 }
 
 # Log warning message
 # Arguments:
-#   $1 - Operation/component name
-#   $2 - Message
+#   $1 - Message (or component name if $2 provided)
+#   $2 - Message (optional, if provided $1 is component name)
 log::warn() {
-  log::write "WARN" "$1" "$2"
+  if [[ $# -eq 1 ]]; then
+    log::write "WARN" "MAIN" "$1"
+  else
+    log::write "WARN" "$1" "$2"
+  fi
 }
 
 # Log error message
 # Arguments:
-#   $1 - Operation/component name
-#   $2 - Message
+#   $1 - Message (or component name if $2 provided)
+#   $2 - Message (optional, if provided $1 is component name)
 log::error() {
-  log::write "ERROR" "$1" "$2"
+  if [[ $# -eq 1 ]]; then
+    log::write "ERROR" "MAIN" "$1"
+  else
+    log::write "ERROR" "$1" "$2"
+  fi
 }
 
 # Log fatal error and flush immediately
 # Arguments:
-#   $1 - Operation/component name
-#   $2 - Message
+#   $1 - Message (or component name if $2 provided)
+#   $2 - Message (optional, if provided $1 is component name)
 log::fatal() {
-  log::write "FATAL" "$1" "$2"
+  if [[ $# -eq 1 ]]; then
+    log::write "FATAL" "MAIN" "$1"
+  else
+    log::write "FATAL" "$1" "$2"
+  fi
   log::flush
 }
 

@@ -5,7 +5,7 @@ exit 1
 )m4_include([argbash.m4])
 
 # ARG_OPTIONAL_BOOLEAN([dry-run], [d], [Show what would be changed without making changes])
-# ARG_OPTIONAL_BOOLEAN([verbose], [v], [Show detailed output with progress])
+# ARG_OPTIONAL_BOOLEAN([verbose], [], [Show detailed output with progress])
 # ARG_OPTIONAL_SINGLE([path], [p], [Target directory path (takes precedence over positional arg)], [])
 # ARG_OPTIONAL_REPEATED([ext], [e], [File extension to process (can be used multiple times)], [])
 # ARG_OPTIONAL_SINGLE([max-files], [], [Maximum files to process], [10000])
@@ -23,7 +23,7 @@ exit 1
 # ARG_OPTIONAL_SINGLE([log-file], [], [Custom log file location], [])
 # ARG_POSITIONAL_SINGLE([directory], [Directory to process (default: current directory)], [.])
 # ARG_DEFAULTS_POS
-# ARG_HELP([Reset file associations for existing files by clearing LaunchServices extended attributes.\nThis forces files to use the system-wide defaults set by duti.\n\nEnhanced with comprehensive logging, resource limits, and throttling.])
+# ARG_HELP([Reset file associations by clearing LaunchServices extended attributes. Enhanced with logging, resource limits, and throttling.])
 # ARGBASH_SET_INDENT([  ])
 # ARGBASH_GO
 

@@ -216,6 +216,18 @@ reset-file-associations-preview DIR=".":
     set -euo pipefail
     ./scripts/reset-file-associations.sh --dry-run --verbose "{{DIR}}"
 
+# Reset file associations using v2 script (modular implementation)
+reset-v2 DIR="." *ARGS="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ./scripts/reset-file-associations-v2.sh {{ARGS}} "{{DIR}}"
+
+# Reset file associations v2 (dry run preview)
+reset-v2-preview DIR=".":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ./scripts/reset-file-associations-v2.sh --dry-run --verbose "{{DIR}}"
+
 # Quick test with current directory
 test:
     @echo "🧪 Testing file association reset (dry run)..."
@@ -307,6 +319,34 @@ test-unit:
         echo -e "{{RED}}❌ $TEST_FAILURES test suite(s) failed{{NC}}"
         exit 1
     fi
+
+# Run integration tests for main script
+test-integration:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo -e "{{CYAN}}🧪 Running integration tests...{{NC}}"
+    echo ""
+
+    if [ ! -f tests/integration/test-main-script.sh ]; then
+        echo -e "{{RED}}❌ Integration tests not found{{NC}}"
+        exit 1
+    fi
+
+    bash tests/integration/test-main-script.sh
+
+# Run all tests (unit + integration)
+test-all:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo -e "{{CYAN}}🧪 Running all tests...{{NC}}"
+    echo ""
+
+    just test-unit
+    echo ""
+    just test-integration
+
+    echo ""
+    echo -e "{{GREEN}}✅ All tests completed successfully{{NC}}"
 
 # ============================================================================
 # PROJECT MANAGEMENT

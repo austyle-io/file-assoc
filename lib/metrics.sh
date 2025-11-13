@@ -22,6 +22,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/core.sh"
 
 # Module version
+# Guard against multiple sourcing
+if [[ -n "${METRICS_MODULE_VERSION:-}" ]]; then
+  return 0
+fi
+
 readonly METRICS_MODULE_VERSION="1.0.0"
 
 # ============================================================================
