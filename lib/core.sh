@@ -23,6 +23,11 @@ fi
 # CONSTANTS
 # ============================================================================
 
+# Guard against multiple sourcing
+if [[ -n "${CORE_VERSION:-}" ]]; then
+  return 0
+fi
+
 # Version information
 readonly CORE_VERSION="1.0.0"
 

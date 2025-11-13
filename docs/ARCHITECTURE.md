@@ -2,7 +2,7 @@
 ## file-assoc - Modern Shell Scripting Architecture
 
 **Last Updated:** 2025-11-13
-**Status:** Phase 5 - GNU Parallel Integration (Complete)
+**Status:** Phase 6 - Main Script Refactoring (Complete)
 
 ---
 
@@ -1066,7 +1066,51 @@ See `templates/README.md` for complete documentation.
 - ✅ Update documentation with complete API reference
 - ✅ Benefit: Eliminates ~170 lines of manual worker coordination
 
-### Phase 6-9: Integration & Enhancement (🚧 Next)
+### Phase 6: Main Script Refactoring (✅ Complete)
+
+**Goal:** Refactor main script to use all modules, reducing from 1,905 to ~400 lines
+
+**Deliverables:**
+- ✅ Argument parser (`lib/args-parser.sh`) - 363 lines
+- ✅ New modular main script (`scripts/reset-file-associations-v2.sh`) - 484 lines
+- ✅ Integration tests (`tests/integration/test-main-script.sh`) - 519 lines
+- ✅ Updated justfile with `test-integration`, `reset-v2` recipes
+- ✅ Migration guide (`docs/MIGRATION_V1_TO_V2.md`)
+
+**Code Reduction:**
+- Original script: 1,905 lines (monolithic)
+- New v2 script: 484 lines (modular)
+- **Reduction: 1,421 lines (74.6% reduction)**
+
+**Key Features:**
+- Full module integration (core, ui, logging, files, xattr, sampling, parallel, metrics)
+- Worker function for parallel processing
+- Comprehensive orchestration logic
+- Signal handling and graceful interruption
+- 14 integration tests covering all major functionality
+
+**Script Structure:**
+```bash
+#!/usr/bin/env bash
+# Module imports (8 modules)
+# Configuration & defaults
+# Signal handling
+# Worker function (exported for parallel)
+# Initialization
+# Validation
+# User interface (header, confirmation)
+# Sampling phase
+# Processing phase (per extension)
+# Reporting phase
+# Main orchestration
+```
+
+**Testing:**
+- Integration test suite with 14 tests
+- Tests cover: help, dry-run, execution, filtering, sampling, limits, logging
+- Can be run with: `just test-integration`
+
+### Phase 7-9: Enhancement & Optimization (⏳ Planned)
 
 See [REFACTORING_PLAN.md](REFACTORING_PLAN.md) for complete timeline.
 
@@ -1101,11 +1145,12 @@ Test coverage: >80%
 
 ### Code Quality
 
-- ✅ Main script reduced from 1,905 → ~300 lines
-- ✅ Modular libraries: 9 files, ~1,000 total lines
-- ✅ Test coverage > 80%
+- ✅ Main script reduced from 1,905 → 484 lines (74.6% reduction)
+- ✅ Modular libraries: 9 files, ~1,200 total lines
+- ✅ Test coverage: 14 integration tests + unit tests for all modules
 - ✅ Shellcheck passing with zero warnings
 - ✅ All functions < 50 lines
+- ✅ Argument parser: 363 lines (manual implementation, compatible with Argbash template)
 
 ### User Experience
 

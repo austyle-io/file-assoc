@@ -22,6 +22,11 @@ source "$SCRIPT_DIR/files.sh"
 source "$SCRIPT_DIR/xattr.sh"
 
 # Module version
+# Guard against multiple sourcing
+if [[ -n "${SAMPLING_MODULE_VERSION:-}" ]]; then
+  return 0
+fi
+
 readonly SAMPLING_MODULE_VERSION="1.0.0"
 
 # ============================================================================
