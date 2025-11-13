@@ -137,7 +137,7 @@
 
 	// Lifecycle scripts
 	"onCreateCommand": {
-		"install-deps": "echo 'Installing Homebrew packages...' && eval \"$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\" && brew bundle --file=Brewfile.linux --no-lock || echo 'Brewfile.linux not found or failed'",
+		"install-deps": "echo 'Installing Homebrew packages...' && eval \"$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\" && brew bundle --file=Brewfile.linux || echo 'Brewfile.linux not found or failed'",
 		"install-uv-tools": "uv --version && echo 'uv is ready!'"
 	},
 
