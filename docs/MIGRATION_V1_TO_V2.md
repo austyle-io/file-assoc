@@ -406,7 +406,7 @@ cd /path/to/file-assoc
 ### Issue: Gum not available warning
 
 **Symptom:**
-```
+```text
 ⚠ Gum not available - using fallback UI
 ```
 
@@ -419,7 +419,7 @@ brew install gum
 ### Issue: GNU Parallel not available
 
 **Symptom:**
-```
+```text
 ⚠ GNU Parallel not available - will use sequential processing
 ```
 
