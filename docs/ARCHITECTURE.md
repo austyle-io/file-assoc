@@ -1,8 +1,8 @@
 # Architecture Documentation
 ## file-assoc - Modern Shell Scripting Architecture
 
-**Last Updated:** 2025-11-12
-**Status:** Phase 4 - Argument Parsing (Argbash Template Ready)
+**Last Updated:** 2025-11-13
+**Status:** Phase 5 - GNU Parallel Integration (Complete)
 
 ---
 
@@ -36,7 +36,7 @@ file-assoc/
 │   ├── xattr.sh                 # ✅ Extended attribute management
 │   ├── sampling.sh              # ✅ Smart sampling logic
 │   ├── metrics.sh               # ✅ Performance tracking
-│   ├── parallel.sh              # 🚧 GNU Parallel wrapper
+│   ├── parallel.sh              # ✅ GNU Parallel wrapper
 │   └── config.sh                # 🚧 Configuration management
 │
 ├── scripts/
@@ -55,8 +55,7 @@ file-assoc/
 │   ├── test-files.sh            # ✅ Tests for lib/files.sh
 │   ├── test-xattr.sh            # ✅ Tests for lib/xattr.sh
 │   ├── test-metrics.sh          # ✅ Tests for lib/metrics.sh
-│   ├── test-sampling.sh         # 🚧 Tests for lib/sampling.sh
-│   ├── test-parallel.sh         # 🚧 Tests for lib/parallel.sh
+│   ├── test-parallel.sh         # ✅ Tests for lib/parallel.sh
 │   └── fixtures/                # Test data
 │
 ├── config/
@@ -595,6 +594,96 @@ metrics::report
 # Or get simple summary
 echo $(metrics::summary)
 # Output: Processed 1000 files in 5.23s (191.2 files/s)
+```
+
+---
+
+#### `lib/parallel.sh` - GNU Parallel Integration ✅
+
+**Status:** Complete (Phase 5)
+**Lines:** ~290
+**Dependencies:** None (requires GNU Parallel installed)
+**Test Coverage:** 10/10 tests passing
+
+**Purpose:**
+Provides wrappers around GNU Parallel for efficient parallel file processing with automatic load balancing, progress tracking, and error handling. Replaces manual xargs-based parallelization with a robust, feature-rich solution.
+
+**Key Functions:**
+
+```bash
+# Initialization
+parallel::init()                     # Check GNU Parallel availability
+parallel::is_available()             # Check if parallel is installed
+parallel::get_workers()              # Auto-detect optimal worker count
+
+# Basic Execution
+parallel::run()                      # Basic parallel runner with defaults
+parallel::run_with_progress()        # Run with built-in progress bar
+parallel::run_custom()               # Run with custom options
+
+# High-Level Wrappers
+parallel::process_files()            # Process files with custom function
+parallel::version()                  # Get GNU Parallel version
+parallel::status()                   # Display module status
+```
+
+**Usage Example:**
+
+```bash
+source lib/parallel.sh
+source lib/xattr.sh
+
+# Initialize
+parallel::init || {
+  echo "GNU Parallel not available"
+  exit 1
+}
+
+# Define processing function
+process_file() {
+  local file="$1"
+  if xattr::has_launch_services "$file"; then
+    xattr::clear_launch_services "$file"
+    echo "Cleared: $file"
+  fi
+}
+export -f process_file
+
+# Process files in parallel with progress
+find /path/to/files -name "*.md" \
+  | parallel::run_with_progress process_file
+
+# Or use high-level wrapper
+files::find_by_ext "$DIR" "md" \
+  | parallel::process_files process_file
+```
+
+**Benefits over Manual xargs:**
+
+- **Automatic output ordering** (`--keep-order`) - Results appear in input order
+- **Built-in progress tracking** (`--progress`) - No custom progress bars needed
+- **Better load balancing** - Distributes work optimally across workers
+- **Simpler error handling** - `--halt soon,fail=1` stops on first error
+- **ETA estimation** - Shows estimated completion time
+- **~170 lines eliminated** - Removes complex worker coordination code
+
+**Worker Count Auto-Detection:**
+
+The module automatically detects optimal worker count based on CPU cores:
+- Uses 75% of available cores (leaves headroom for system)
+- Minimum of 1 worker
+- Can be overridden with `WORKERS` environment variable
+- Platform-aware (macOS: `sysctl`, Linux: `nproc`)
+
+**Example with Custom Options:**
+
+```bash
+# Process with timeout and retry
+echo -e "file1\nfile2\nfile3" \
+  | parallel::run_custom "--jobs 4 --timeout 30 --retries 2" process_file
+
+# Process with specific worker count
+WORKERS=8 parallel::run process_file <<< "$files"
 ```
 
 ---

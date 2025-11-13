@@ -290,6 +290,16 @@ test-unit:
         fi
     fi
 
+    # Run parallel library tests
+    if [ -f tests/test-parallel.sh ]; then
+        echo -e "{{CYAN}}Testing lib/parallel.sh...{{NC}}"
+        if bash tests/test-parallel.sh 2>&1 | grep -v "readonly variable"; then
+            echo ""
+        else
+            TEST_FAILURES=$((TEST_FAILURES + 1))
+        fi
+    fi
+
     # Summary
     if [ $TEST_FAILURES -eq 0 ]; then
         echo -e "{{GREEN}}✅ All unit tests completed successfully{{NC}}"
