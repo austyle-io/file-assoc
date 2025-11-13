@@ -131,6 +131,12 @@
 				// Utilities
 				"formulahendry.code-runner",
 				"gruntfuggly.todo-tree"
+			],
+
+			// Disable extensions that cause errors without proper dependencies
+			"disabledExtensions": [
+				"sonarsource.sonarlint-vscode",
+				"mkhl.direnv"
 			]
 		}
 	},
