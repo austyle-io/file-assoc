@@ -1,0 +1,140 @@
+# CodeRabbit Configuration
+# Documentation: https://docs.coderabbit.ai/guides/configure-coderabbit
+
+# Language settings
+language: en-US
+early_access: true
+enable_free_tier: false
+
+# Review settings
+reviews:
+  # Auto-review new PRs
+  auto_review:
+    enabled: true
+    drafts: true
+    base_branches:
+      - main
+
+  # Request changes workflow
+  request_changes_workflow: false
+
+  # High-level summary placement
+  high_level_summary: true
+  high_level_summary_placeholder: "@coderabbitai summary"
+
+  # Auto-generate PR descriptions when empty or placeholder detected
+  auto_title_placeholder: "@coderabbitai title"
+
+  # Review comments settings
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+
+  # Path-based instructions
+  path_instructions:
+    - path: "lib/**/*.sh"
+      instructions: |
+        - Verify error handling (set -euo pipefail or equivalent)
+        - Check variable quoting and brace expansion
+        - Ensure functions are reusable and well-documented
+        - Review for POSIX compatibility when applicable
+        - Check for proper use of local variables in functions
+        - Verify sourcing dependencies are available
+        - Ensure ShellCheck compliance (.shellcheckrc enforces zero-tolerance)
+
+    - path: "bin/**/*"
+      instructions: |
+        - Verify shebang is correct (#!/usr/bin/env bash)
+        - Check for proper error handling and user feedback
+        - Ensure help text is comprehensive and accurate
+        - Review argument parsing and validation
+        - Check for safe PATH handling
+        - Verify exit codes are meaningful
+        - Ensure commands are user-friendly
+
+    - path: "scripts/**/*.sh"
+      instructions: |
+        - Check for proper error handling and logging
+        - Verify file operations are safe (quoting, existence checks)
+        - Review permission and privilege handling
+        - Ensure cleanup on failure (trap handlers)
+        - Check for macOS-specific compatibility (xattr, duti, lsregister)
+        - Review parallel processing for race conditions
+        - Verify progress reporting is accurate
+
+    - path: "tests/**/*.sh"
+      instructions: |
+        - Verify test isolation and independence
+        - Check for proper setup and cleanup
+        - Review assertion clarity and coverage
+        - Ensure tests are deterministic (no random/timing issues)
+        - Check for proper error messages on failure
+        - Verify mock/stub usage if applicable
+        - Ensure test file discovery works correctly
+
+    - path: "config/**/*"
+      instructions: |
+        - Verify configuration format is correct
+        - Check for documentation of configuration options
+        - Review default values for safety
+        - Ensure backward compatibility if applicable
+        - Verify examples are accurate
+
+    - path: ".github/workflows/*.yml"
+      instructions: |
+        - Review workflow permissions (least privilege principle)
+        - Check for secret exposure risks
+        - Verify job dependencies and ordering
+        - Review caching strategies for efficiency
+        - Ensure error handling and notifications
+        - Check for appropriate trigger conditions
+        - Verify artifact retention policies
+
+    - path: "justfile"
+      instructions: |
+        - Verify recipe dependencies are correct
+        - Check for proper error handling in shell blocks
+        - Review variable usage and quoting
+        - Ensure recipes are well-documented
+        - Check for consistent patterns across recipes
+        - Verify color codes and output formatting
+
+    - path: "docs/**/*.md"
+      instructions: |
+        - Check for markdown linting issues
+        - Verify code block language tags (MD040)
+        - Ensure proper heading hierarchy
+        - Check for broken links and references
+        - Verify examples are accurate and up-to-date
+        - Review for clarity and completeness
+
+    - path: ".devcontainer/**/*"
+      instructions: |
+        - Review Dockerfile for security best practices
+        - Check for proper layer caching optimization
+        - Verify tool versions are pinned when critical
+        - Review devcontainer.json for necessary extensions
+        - Check lifecycle scripts (postCreateCommand, etc.)
+        - Ensure proper permission handling
+
+  # Path-based filters
+  path_filters:
+    - "!**/*.lock"
+    - "!**/*.log"
+    - "!**/node_modules/**"
+    - "!**/.git/**"
+    - "!**/dist/**"
+    - "!**/build/**"
+
+# Chat settings
+chat:
+  auto_reply: true
+
+# Tone settings (max 250 chars per schema)
+# macOS file association toolkit: xattr/duti-based, parallel processing, justfile tasks,
+# comprehensive shell tests. Zero-tolerance ShellCheck policy. See .shellcheckrc.
+tone_instructions: "Shell security-first review: check error handling (set -euo pipefail), variable quoting, ShellCheck compliance. Focus on macOS xattr/duti safety, parallel processing correctness, user-facing command UX."
+
+# Abort criteria (don't review these changes)
+abort_on_close: true
+abort_on_outdated_diff: true
