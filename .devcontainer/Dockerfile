@@ -108,7 +108,8 @@ RUN echo '#!/bin/bash\neval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >
 
 # Install argbash via Homebrew (this is what we need!)
 RUN --mount=type=cache,target=/home/linuxbrew/.cache/Homebrew \
-    su - linuxbrew -c 'brew install argbash'
+    chown -R linuxbrew:linuxbrew /home/linuxbrew/.cache/Homebrew \
+    && su - linuxbrew -c 'brew install argbash'
 
 # Make argbash available system-wide
 RUN ln -sf /home/linuxbrew/.linuxbrew/bin/argbash /usr/local/bin/argbash
