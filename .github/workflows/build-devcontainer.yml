@@ -123,6 +123,7 @@ jobs:
           context: .
           file: .devcontainer/Dockerfile
           push: false
+          load: true
           tags: devcontainer:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
