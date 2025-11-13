@@ -6,7 +6,9 @@ set -e
 
 echo '✨ Development container ready!'
 echo '📦 Python versions available:'
-ls -1 /usr/bin/python3.* | grep -E 'python3\.[0-9]+$'
+for py in /usr/bin/python3.*; do
+  [[ -f "$py" && "$py" =~ python3\.[0-9]+$ ]] && basename "$py"
+done
 
 echo '⚡ uv version:'
 uv --version
