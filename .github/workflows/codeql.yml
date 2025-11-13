@@ -9,16 +9,12 @@ on:
     branches:
       - main
     paths:
-      - "**.sh"
-      - "**.bash"
       - "**.py"
       - ".github/workflows/codeql.yml"
   pull_request:
     branches:
       - main
     paths:
-      - "**.sh"
-      - "**.bash"
       - "**.py"
       - ".github/workflows/codeql.yml"
   schedule:
@@ -44,7 +40,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ['python']
+        language: ["python"]
         # Note: CodeQL doesn't have first-class shell support yet
         # Shell scripts are analyzed using security-scanning.yml instead
 
