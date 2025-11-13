@@ -1,8 +1,8 @@
 # Architecture Documentation
 ## file-assoc - Modern Shell Scripting Architecture
 
-**Last Updated:** 2025-11-12
-**Status:** Phase 4 - Argument Parsing (Argbash Template Ready)
+**Last Updated:** 2025-11-13
+**Status:** Phase 5 - GNU Parallel Integration (Complete)
 
 ---
 
@@ -36,7 +36,7 @@ file-assoc/
 │   ├── xattr.sh                 # ✅ Extended attribute management
 │   ├── sampling.sh              # ✅ Smart sampling logic
 │   ├── metrics.sh               # ✅ Performance tracking
-│   ├── parallel.sh              # 🚧 GNU Parallel wrapper
+│   ├── parallel.sh              # ✅ GNU Parallel wrapper
 │   └── config.sh                # 🚧 Configuration management
 │
 ├── scripts/
@@ -56,7 +56,7 @@ file-assoc/
 │   ├── test-xattr.sh            # ✅ Tests for lib/xattr.sh
 │   ├── test-metrics.sh          # ✅ Tests for lib/metrics.sh
 │   ├── test-sampling.sh         # 🚧 Tests for lib/sampling.sh
-│   ├── test-parallel.sh         # 🚧 Tests for lib/parallel.sh
+│   ├── test-parallel.sh         # ✅ Tests for lib/parallel.sh
 │   └── fixtures/                # Test data
 │
 ├── config/
@@ -467,22 +467,85 @@ xattr::list "/path/to/file.txt"
 
 ---
 
-#### `lib/parallel.sh` - GNU Parallel Integration 🚧
+#### `lib/parallel.sh` - GNU Parallel Integration ✅
 
-**Status:** Planned (Phase 5)
-**Dependencies:** `parallel` (GNU Parallel), lib/core.sh
+**Status:** Complete (Phase 5)
+**Lines:** ~330
+**Dependencies:** `parallel` (GNU Parallel, optional), lib/core.sh
+**Test Coverage:** 10/10 tests passing
 
 **Purpose:**
-Parallel processing using GNU Parallel instead of manual xargs coordination.
+Clean, modular API for parallel file processing using GNU Parallel. Replaces ~170 lines of manual xargs-based worker coordination with battle-tested parallel processing. Provides graceful degradation when GNU Parallel is not available.
 
-**Planned Functions:**
+**Key Functions:**
 
 ```bash
-parallel::init()            # Check GNU Parallel availability
-parallel::process_files()   # Process files in parallel
-parallel::get_workers()     # Auto-detect optimal workers
-parallel::run()            # Generic parallel runner
+# Initialization
+parallel::init()            # Initialize module, check availability, set variables
+
+# Availability
+parallel::is_available()    # Check if GNU Parallel is available (returns 0/1)
+
+# Worker Management
+parallel::get_workers()     # Auto-detect optimal workers (75% of CPU cores)
+                           # Respects WORKERS env var, platform-aware (sysctl/nproc)
+
+# Core Execution
+parallel::run()            # Execute with sensible defaults:
+                           #   --jobs, --keep-order, --line-buffer, --halt
+parallel::run_with_progress() # Same as run() but adds --progress and --eta
+parallel::run_custom()     # Advanced wrapper with custom options
+
+# High-Level API
+parallel::process_files()  # Process files using custom function
+                           # Args: function_name, show_progress
+                           # Validates function exists, handles stdin
+
+# Information
+parallel::version()        # Return GNU Parallel version string
+parallel::status()         # Display detailed module status
 ```
+
+**Usage Example:**
+
+```bash
+source lib/core.sh
+source lib/parallel.sh
+
+# Check availability
+if parallel::is_available; then
+  echo "Parallel processing enabled"
+  echo "Workers: $(parallel::get_workers)"
+fi
+
+# Define a worker function
+process_file() {
+  local file=$1
+  echo "Processing: $file"
+  # ... do work ...
+}
+export -f process_file
+
+# Process files in parallel with progress
+find . -name "*.txt" | parallel::process_files "process_file" true
+
+# Or use low-level API
+echo -e "1\n2\n3" | parallel::run "process_item" "{}"
+
+# Display status
+parallel::status
+```
+
+**Benefits:**
+
+- **Code Reduction:** Eliminates ~170 lines of manual worker coordination
+- **Reliability:** Battle-tested GNU Parallel handles edge cases
+- **Performance:** Optimal worker detection (75% of CPU cores)
+- **Features:** Built-in progress tracking, ETA, order preservation
+- **Platform-Aware:** Uses sysctl (macOS) or nproc (Linux)
+- **Flexible:** High-level API for common cases, low-level for custom needs
+- **Graceful:** Detects availability, clear error messages
+- **Configurable:** Respects WORKERS environment variable
 
 ---
 
@@ -689,7 +752,7 @@ tests/
 ├── test-xattr.sh         # ✅ Unit tests for lib/xattr.sh (7 tests, macOS only)
 ├── test-metrics.sh       # ✅ Unit tests for lib/metrics.sh (10 tests)
 ├── test-sampling.sh      # 🚧 Unit tests for lib/sampling.sh
-├── test-parallel.sh      # 🚧 Unit tests for lib/parallel.sh
+├── test-parallel.sh      # ✅ Unit tests for lib/parallel.sh (10 tests)
 ├── integration/          # 🚧 End-to-end tests
 │   ├── test-full-workflow.sh
 │   ├── test-dry-run.sh
@@ -712,9 +775,9 @@ assert_equals "expected" "actual" "message"
 assert_success command args
 assert_failure command args
 
-# Results (Phase 3 complete)
-Tests run: 81
-Passed: 81
+# Results (Phase 5 complete)
+Tests run: 91
+Passed: 91
 Failed: 0
 ✅ All tests passed!
 
@@ -725,6 +788,7 @@ Failed: 0
 # - files.sh:   12/12 tests passing
 # - xattr.sh:    7/7  tests passing
 # - metrics.sh: 10/10 tests passing
+# - parallel.sh: 10/10 tests passing
 ```
 
 ### Running Tests
@@ -990,7 +1054,19 @@ extensions:
 **Note**: Argbash must be installed before parser can be generated.
 See `templates/README.md` for complete documentation.
 
-### Phase 5-9: Integration & Enhancement (🚧 Next)
+### Phase 5: GNU Parallel Integration (✅ Complete)
+
+- ✅ Create lib/parallel.sh with GNU Parallel wrapper
+- ✅ Implement 9 core functions (init, is_available, get_workers, run variants, etc.)
+- ✅ Add platform-aware worker detection (sysctl/nproc)
+- ✅ Implement high-level parallel::process_files() API
+- ✅ Add graceful degradation when parallel not installed
+- ✅ Create comprehensive test suite (10 tests)
+- ✅ Update justfile to run parallel tests
+- ✅ Update documentation with complete API reference
+- ✅ Benefit: Eliminates ~170 lines of manual worker coordination
+
+### Phase 6-9: Integration & Enhancement (🚧 Next)
 
 See [REFACTORING_PLAN.md](REFACTORING_PLAN.md) for complete timeline.
 
