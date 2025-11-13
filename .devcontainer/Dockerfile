@@ -32,6 +32,14 @@ RUN apt-get update \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
 
+# Add deadsnakes PPA for multiple Python versions
+RUN apt-get update \
+    && apt-get -y install --no-install-recommends software-properties-common \
+    && add-apt-repository ppa:deadsnakes/ppa -y \
+    && apt-get autoremove -y \
+    && apt-get clean -y \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install Python 3.11, 3.12, 3.13 (3.14 not released yet as of Nov 2024)
 RUN apt-get update \
     && apt-get -y install --no-install-recommends \
