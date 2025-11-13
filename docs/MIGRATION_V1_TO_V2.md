@@ -315,7 +315,7 @@ just test-integration
 ```
 
 Expected output:
-```
+```text
 ==========================================
   File Association Reset - Integration Tests
 ==========================================
@@ -392,7 +392,7 @@ diff -r ~/test-migration/v1-test ~/test-migration/v2-test
 ### Issue: "Module not found" error
 
 **Symptom:**
-```
+```bash
 ./scripts/reset-file-associations-v2.sh: line 17: lib/core.sh: No such file or directory
 ```
 
