@@ -102,35 +102,23 @@
 
 			// Extensions to install
 			"extensions": [
-				// Shell scripting
 				"timonwong.shellcheck",
 				"foxundermoon.shell-format",
 				"mads-hartmann.bash-ide-vscode",
-
-				// Python
 				"ms-python.python",
 				"ms-python.vscode-pylance",
 				"charliermarsh.ruff",
-
-				// General development
 				"esbenp.prettier-vscode",
 				"editorconfig.editorconfig",
 				"streetsidesoftware.code-spell-checker",
-
-				// Git
 				"eamodio.gitlens",
 				"github.vscode-pull-request-github",
-
-				// Markdown
 				"yzhang.markdown-all-in-one",
 				"davidanson.vscode-markdownlint",
-
-				// Justfile
 				"nefrob.vscode-just-syntax",
-
-				// Utilities
 				"formulahendry.code-runner",
-				"gruntfuggly.todo-tree"
+				"gruntfuggly.todo-tree",
+				"github.vscode-github-actions"
 			],
 
 			// Disable extensions that cause errors without proper dependencies
