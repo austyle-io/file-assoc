@@ -32,6 +32,14 @@ RUN apt-get update \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
 
+# Add deadsnakes PPA for multiple Python versions
+RUN apt-get update \
+    && apt-get -y install --no-install-recommends software-properties-common \
+    && add-apt-repository ppa:deadsnakes/ppa -y \
+    && apt-get autoremove -y \
+    && apt-get clean -y \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install Python 3.11, 3.12, 3.13 (3.14 not released yet as of Nov 2024)
 RUN apt-get update \
     && apt-get -y install --no-install-recommends \
@@ -98,12 +106,22 @@ RUN echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> /etc/profil
 RUN echo '#!/bin/bash\neval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' > /usr/local/bin/brew-env \
     && chmod +x /usr/local/bin/brew-env
 
-# Install argbash via Homebrew (this is what we need!)
-RUN --mount=type=cache,target=/home/linuxbrew/.cache/Homebrew \
-    su - linuxbrew -c 'brew install argbash'
-
-# Make argbash available system-wide
-RUN ln -sf /home/linuxbrew/.linuxbrew/bin/argbash /usr/local/bin/argbash
+# Install argbash from source (not available in Homebrew or apt)
+# Argbash is used to generate bash argument parsers for our scripts
+RUN apt-get update \
+    && apt-get -y install --no-install-recommends \
+        autoconf \
+        make \
+        wget \
+    && wget -q https://github.com/matejak/argbash/archive/refs/tags/2.10.0.tar.gz -O /tmp/argbash.tar.gz \
+    && tar -xzf /tmp/argbash.tar.gz -C /tmp \
+    && cd /tmp/argbash-2.10.0/resources \
+    && make install PREFIX=/usr \
+    && cd / \
+    && rm -rf /tmp/argbash* \
+    && apt-get autoremove -y \
+    && apt-get clean -y \
+    && rm -rf /var/lib/apt/lists/*
 
 # Switch to vscode user (standard devcontainer user)
 ARG USERNAME=vscode
