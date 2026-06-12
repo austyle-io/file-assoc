@@ -5,81 +5,121 @@
 # Apply with: duti config/macos-file-associations.duti
 # List current associations: duti -x <extension>
 #
-# Bundle ID for Cursor: com.todesktop.230313mzl4w4u92
+# Bundle ID for VS Code: com.microsoft.VSCode
 
-# Development Files - Cursor (primary editor)
-com.todesktop.230313mzl4w4u92  .json       all
-com.todesktop.230313mzl4w4u92  .jsonc      all
-com.todesktop.230313mzl4w4u92  .json5      all
-com.todesktop.230313mzl4w4u92  .yaml       all
-com.todesktop.230313mzl4w4u92  .yml        all
-com.todesktop.230313mzl4w4u92  .toml       all
-com.todesktop.230313mzl4w4u92  .md         all
-com.todesktop.230313mzl4w4u92  .markdown   all
-com.todesktop.230313mzl4w4u92  .txt        all
-com.todesktop.230313mzl4w4u92  .log        all
+# Development Files - VS Code (primary editor)
+com.microsoft.VSCode  .json       all
+com.microsoft.VSCode  .jsonc      all
+com.microsoft.VSCode  .json5      all
+com.microsoft.VSCode  .yaml       all
+com.microsoft.VSCode  .yml        all
+com.microsoft.VSCode  .toml       all
+com.microsoft.VSCode  .md         all
+com.microsoft.VSCode  .markdown   all
+com.microsoft.VSCode  .txt        all
+com.microsoft.VSCode  .log        all
 
-# Shell Scripts - Cursor
-com.todesktop.230313mzl4w4u92  .sh         all
-com.todesktop.230313mzl4w4u92  .bash       all
-com.todesktop.230313mzl4w4u92  .zsh        all
-com.todesktop.230313mzl4w4u92  .fish       all
-com.todesktop.230313mzl4w4u92  public.shell-script  all
+# Shell Scripts - VS Code
+com.microsoft.VSCode  .sh         all
+com.microsoft.VSCode  .bash       all
+com.microsoft.VSCode  .zsh        all
+com.microsoft.VSCode  .fish       all
+com.microsoft.VSCode  public.shell-script  all
 
-# Programming Languages - Cursor
-com.todesktop.230313mzl4w4u92  .ts         all
-com.todesktop.230313mzl4w4u92  .tsx        all
-com.todesktop.230313mzl4w4u92  .js         all
-com.todesktop.230313mzl4w4u92  .jsx        all
-com.todesktop.230313mzl4w4u92  .mjs        all
-com.todesktop.230313mzl4w4u92  .cjs        all
-com.todesktop.230313mzl4w4u92  .py         all
-com.todesktop.230313mzl4w4u92  .rs         all
-com.todesktop.230313mzl4w4u92  .go         all
-com.todesktop.230313mzl4w4u92  .java       all
-com.todesktop.230313mzl4w4u92  .c          all
-com.todesktop.230313mzl4w4u92  .cpp        all
-com.todesktop.230313mzl4w4u92  .h          all
-com.todesktop.230313mzl4w4u92  .hpp        all
-com.todesktop.230313mzl4w4u92  .rb         all
+# Programming Languages - VS Code
+com.microsoft.VSCode  .ts         all
+com.microsoft.VSCode  .tsx        all
+com.microsoft.VSCode  .js         all
+com.microsoft.VSCode  .jsx        all
+com.microsoft.VSCode  .mjs        all
+com.microsoft.VSCode  .cjs        all
+com.microsoft.VSCode  .py         all
+com.microsoft.VSCode  .rs         all
+com.microsoft.VSCode  .go         all
+com.microsoft.VSCode  .java       all
+com.microsoft.VSCode  .c          all
+com.microsoft.VSCode  .cpp        all
+com.microsoft.VSCode  .h          all
+com.microsoft.VSCode  .hpp        all
+com.microsoft.VSCode  .rb         all
+com.microsoft.VSCode  .lua        all
+com.microsoft.VSCode  .php        all
+com.microsoft.VSCode  .swift      all
+com.microsoft.VSCode  .kt         all
+com.microsoft.VSCode  .scala      all
+com.microsoft.VSCode  .ex         all
+com.microsoft.VSCode  .exs        all
 
-# Configuration Files - Cursor
-com.todesktop.230313mzl4w4u92  .env        all
-com.todesktop.230313mzl4w4u92  .envrc      all
-com.todesktop.230313mzl4w4u92  .gitignore  all
-com.todesktop.230313mzl4w4u92  .gitattributes  all
-com.todesktop.230313mzl4w4u92  .editorconfig  all
-com.todesktop.230313mzl4w4u92  .npmrc      all
-com.todesktop.230313mzl4w4u92  .bashrc     all
-com.todesktop.230313mzl4w4u92  .zshrc      all
-com.todesktop.230313mzl4w4u92  .vimrc      all
+# Web Frameworks - VS Code
+com.microsoft.VSCode  .vue        all
+com.microsoft.VSCode  .svelte     all
+com.microsoft.VSCode  .astro      all
 
-# Justfile - Cursor (treated as Makefile syntax)
-com.todesktop.230313mzl4w4u92  justfile    all
-com.todesktop.230313mzl4w4u92  Justfile    all
+# Infrastructure as Code - VS Code
+com.microsoft.VSCode  .tf         all
+com.microsoft.VSCode  .tfvars     all
+com.microsoft.VSCode  .hcl        all
+com.microsoft.VSCode  .nix        all
 
-# Dotfiles and hidden configs - Cursor
-com.todesktop.230313mzl4w4u92  .cursorrules  all
-com.todesktop.230313mzl4w4u92  .cursorignore  all
+# API Schemas - VS Code
+com.microsoft.VSCode  .proto      all
+com.microsoft.VSCode  .graphql    all
+com.microsoft.VSCode  .gql        all
 
-# Plain Text - Cursor
-com.todesktop.230313mzl4w4u92  public.plain-text  editor
-com.todesktop.230313mzl4w4u92  public.text  editor
+# Configuration Files - VS Code
+com.microsoft.VSCode  .env        all
+com.microsoft.VSCode  .envrc      all
+com.microsoft.VSCode  .gitignore  all
+com.microsoft.VSCode  .gitattributes  all
+com.microsoft.VSCode  .editorconfig  all
+com.microsoft.VSCode  .npmrc      all
+com.microsoft.VSCode  .bashrc     all
+com.microsoft.VSCode  .zshrc      all
+com.microsoft.VSCode  .vimrc      all
+com.microsoft.VSCode  .ini        all
+com.microsoft.VSCode  .conf       all
+com.microsoft.VSCode  .cfg        all
+com.microsoft.VSCode  .properties  all
 
-# CSV/TSV - Cursor (for viewing/editing)
-com.todesktop.230313mzl4w4u92  .csv        editor
-com.todesktop.230313mzl4w4u92  .tsv        editor
+# Justfile / Makefile - VS Code
+com.microsoft.VSCode  justfile    all
+com.microsoft.VSCode  Justfile    all
+com.microsoft.VSCode  Makefile    all
+com.microsoft.VSCode  makefile    all
 
-# XML/SVG - Cursor (HTML excluded - system protected)
-com.todesktop.230313mzl4w4u92  .xml        all
-com.todesktop.230313mzl4w4u92  .svg        all
+# Dotfiles and hidden configs - VS Code
+com.microsoft.VSCode  .cursorrules  all
+com.microsoft.VSCode  .cursorignore  all
+com.microsoft.VSCode  .code-workspace  all
 
-# SQL - Cursor
-com.todesktop.230313mzl4w4u92  .sql        all
+# Templates - VS Code
+com.microsoft.VSCode  .tmpl       all
+com.microsoft.VSCode  .j2         all
 
-# Docker - Cursor
-com.todesktop.230313mzl4w4u92  Dockerfile  all
-com.todesktop.230313mzl4w4u92  .dockerfile  all
+# Diffs / Patches - VS Code
+com.microsoft.VSCode  .diff       all
+com.microsoft.VSCode  .patch      all
 
-# Container and CI/CD configs - Cursor
-com.todesktop.230313mzl4w4u92  .dockerignore  all
+# Plain Text - VS Code (editor role; keeps system default opener)
+com.microsoft.VSCode  public.plain-text  editor
+com.microsoft.VSCode  public.text  editor
+
+# CSV/TSV - VS Code (editor role; Numbers/Excel stays default)
+com.microsoft.VSCode  .csv        editor
+com.microsoft.VSCode  .tsv        editor
+
+# XML - VS Code (HTML excluded - system protected)
+com.microsoft.VSCode  .xml        all
+
+# SVG - VS Code (editor role; Preview/browser stays default viewer)
+com.microsoft.VSCode  .svg        editor
+
+# SQL - VS Code
+com.microsoft.VSCode  .sql        all
+
+# Docker - VS Code
+com.microsoft.VSCode  Dockerfile  all
+com.microsoft.VSCode  .dockerfile  all
+
+# Container and CI/CD configs - VS Code
+com.microsoft.VSCode  .dockerignore  all

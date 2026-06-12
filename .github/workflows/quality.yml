@@ -1,0 +1,29 @@
+name: Quality
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shell:
+    name: Shell checks
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: brew bundle install --file=Brewfile
+
+      - name: Run quality checks
+        run: just quality
+
+      - name: Run BATS integration tests
+        run: just test-integration
