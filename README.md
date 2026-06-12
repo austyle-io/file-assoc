@@ -1,324 +1,150 @@
-# macOS File Association Management Tools
+# file-assoc
 
-Comprehensive toolkit for managing macOS file associations at both system-wide and per-file levels.
+Standalone macOS file-association tools.
 
-## 📋 Overview
+macOS resolves file associations in two layers:
 
-macOS uses a two-tier file association system:
+1. System-wide defaults in Launch Services, applied here with `duti`.
+2. Per-file overrides stored as `com.apple.LaunchServices.OpenWith` extended attributes, cleared here with `xattr`.
 
-1. **System-wide defaults** - Stored in Launch Services database, applied via `duti`
-2. **Per-file overrides** - Stored as extended attributes on individual files
+This repo contains only the pieces needed for that workflow:
 
-This toolkit provides tools to manage both levels:
-- `file-assoc-setup` - Apply system-wide defaults
-- `file-assoc-reset` - Remove per-file overrides
+- `bin/file-assoc-setup` applies `config/macos-file-associations.duti`.
+- `bin/file-assoc-reset` clears per-file Launch Services overrides under a target directory.
+- `scripts/reset-file-associations.sh` is the reset implementation.
+- `docs/LAUNCH_SERVICES_ANALYSIS.md` explains the macOS behavior and performance tradeoffs.
 
-## 🚀 Quick Start
+## Requirements
 
-### Prerequisites
+- macOS
+- Bash 4+
+- `duti`
+- `bc`
+- `just`, `shellcheck`, and `shfmt` for development tasks
+- `bats-core` (+ `bats-support`, `bats-assert`, `bats-file`) to run the tests
 
-```bash
-# Install duti (if not already installed)
-brew install duti
+Install the Homebrew dependencies:
+
+```bash path=null start=null
+brew bundle install --file=Brewfile
 ```
 
-### Installation
+## Install
 
-1. Add `bin/` to your PATH:
-   ```bash
-   export PATH="/Users/austyle/austyle-io/file-assoc/bin:$PATH"
-   ```
+Add this repo's `bin/` directory to your `PATH`, or invoke the scripts directly.
 
-2. Or use the justfile recipes:
-   ```bash
-   cd /Users/austyle/austyle-io/file-assoc
-   just setup-file-associations
-   ```
+```bash path=null start=null
+export PATH="/Users/tyleraustin/Github/file-assoc/bin:$PATH"
+```
 
-### Basic Usage
+The wrappers resolve the repository root relative to their own location, so they work from anywhere and do not depend on `~/dotfiles`.
 
-```bash
-# Apply system-wide file associations
+## Usage
+
+Apply system-wide defaults:
+
+```bash path=null start=null
 file-assoc-setup
-
-# Reset per-file overrides in a directory
-file-assoc-reset ~/Downloads
-
-# Preview what would be reset (dry run)
-file-assoc-reset --dry-run --verbose ~/Documents
-
-# Get help
-file-assoc-setup --help
-file-assoc-reset --help
 ```
 
-## 📁 Directory Structure
+Edit the duti config:
 
-```
-file-assoc/
-├── README.md                        # This file
-├── justfile                         # Task runner recipes
-├── bin/                             # User-facing commands (add to PATH)
-│   ├── file-assoc-setup            # Apply system-wide associations
-│   └── file-assoc-reset            # Remove per-file overrides
-├── scripts/                         # Core implementation
-│   └── reset-file-associations.sh  # Main reset script (53KB, 1200+ lines)
-├── config/                          # Configuration
-│   └── macos-file-associations.duti # Association mappings (38 extensions)
-└── docs/                            # Documentation
-    └── LAUNCH_SERVICES_ANALYSIS.md # Deep-dive technical documentation
-```
-
-## 🔧 Tools
-
-### 1. file-assoc-setup
-
-**Purpose:** Apply system-wide file associations from configuration.
-
-**Usage:**
-```bash
-file-assoc-setup              # Apply associations
-file-assoc-setup --configure  # Edit config file
-file-assoc-setup --help       # Show help
-```
-
-**What it does:**
-- Validates `duti` is installed
-- Applies all mappings from `config/macos-file-associations.duti`
-- Sets default applications for 38+ file extensions
-- Effects are immediate for new files
-
-### 2. file-assoc-reset
-
-**Purpose:** Remove per-file custom associations to let system defaults apply.
-
-**Usage:**
-```bash
-file-assoc-reset [OPTIONS] [DIRECTORY]
-
-# Common options:
---dry-run              # Preview without making changes
---verbose              # Show detailed output
---ext md --ext sh      # Only process specific extensions
---skip-sampling        # Disable smart sampling optimization
---workers 8            # Set parallel workers (default: auto)
---sample-size 100      # Custom sample size (default: 50)
--p, --path DIR         # Target directory
-```
-
-**Examples:**
-```bash
-# Reset all supported files in Downloads
-file-assoc-reset ~/Downloads
-
-# Dry run with verbose output
-file-assoc-reset --dry-run --verbose ~/Documents
-
-# Only reset markdown and shell files
-file-assoc-reset --ext md --ext sh ~/Projects
-
-# High-performance reset with 16 workers
-file-assoc-reset --workers 16 ~/Code
-```
-
-## 📊 Performance Features
-
-### Smart Sampling
-The reset script includes intelligent sampling to skip directories that don't have custom associations:
-- Samples 50 random files per extension
-- If sample shows 0% with custom associations, skips entire directory
-- Can save minutes on large directories
-
-### Parallel Processing
-- Auto-detects CPU cores
-- Configurable worker count
-- Chunk-based processing for optimal throughput
-- Typical throughput: 100-500 files/s (varies by extension)
-
-### Progress Tracking
-- Real-time progress bars with smooth animations
-- Realistic ETA calculations based on actual throughput
-- Per-extension performance metrics
-- Comprehensive summary report
-
-### Example Performance Report
-```
-Extension           Files  w/Attrs   Duration     Rate
-------------------------------------------------------------
-.js                  6067        0     11.44s   530.2/s
-.json                4740        0      9.69s   489.0/s
-.ts                  4272        0      9.86s   433.0/s
-.md                  3852        0      9.10s   423.2/s
-.tsx                 1768        0      6.88s   256.9/s
-------------------------------------------------------------
-TOTAL               27305        0    211.93s   128.8/s
-```
-
-## 🎯 Supported File Types
-
-### Configuration
-json, jsonc, json5, yaml, yml, toml, env, envrc, gitignore, gitattributes
-
-### Documentation
-md, markdown, txt, log
-
-### Shell Scripts
-sh, bash, zsh, fish
-
-### Programming Languages
-ts, tsx, js, jsx, mjs, cjs, py, rs, go, java, c, cpp, h, hpp, rb
-
-### Data Formats
-csv, tsv, xml, svg, sql
-
-## 📚 Documentation
-
-### Launch Services Architecture
-See `docs/LAUNCH_SERVICES_ANALYSIS.md` for detailed documentation on:
-- How Launch Services works
-- System-wide vs per-file associations
-- Extended attributes structure
-- Database queries and optimization
-- Performance analysis
-
-### Command Help
-All commands include comprehensive help:
-```bash
-file-assoc-setup --help
-file-assoc-reset --help
-```
-
-## 🔄 Common Workflows
-
-### Initial Setup
-```bash
-# 1. Apply system-wide defaults
-file-assoc-setup
-
-# 2. Reset existing files to use new defaults
-file-assoc-reset ~/Downloads
-file-assoc-reset ~/Documents
-file-assoc-reset ~/Code
-```
-
-### After Changing Associations
-```bash
-# 1. Edit configuration
+```bash path=null start=null
 file-assoc-setup --configure
-
-# 2. Re-apply system-wide defaults
-file-assoc-setup
-
-# 3. Reset affected files
-file-assoc-reset ~/Downloads
 ```
 
-### Testing/Verification
-```bash
-# Preview what would change
+Preview per-file override cleanup:
+
+```bash path=null start=null
 file-assoc-reset --dry-run --verbose ~/Downloads
+```
 
-# Check specific file
-xattr -l ~/Downloads/file.md | grep LaunchServices
+Clear per-file overrides:
 
-# Apply if satisfied
+```bash path=null start=null
 file-assoc-reset ~/Downloads
 ```
 
-## 🛠️ Justfile Recipes
+Limit cleanup to specific extensions:
 
-```bash
-# Show available commands
-just
+```bash path=null start=null
+file-assoc-reset --ext md --ext sh ~/Documents
+```
 
-# Apply system-wide associations
+## Reset safety
+
+`file-assoc-reset` mutates files only by deleting the `com.apple.LaunchServices.OpenWith` extended attribute. It does not change file contents.
+
+Recommended workflow:
+
+1. Run `file-assoc-setup` to apply system defaults.
+2. Run `file-assoc-reset --dry-run --verbose <dir>` to preview.
+3. Run `file-assoc-reset <dir>` only after reviewing the preview.
+
+For unattended or scripted runs, use `--no-confirm` only with a narrow target directory or explicit `--ext` filters.
+
+## Reset options
+
+Common options:
+
+- `--dry-run`, `-d`: preview without changing xattrs.
+- `--verbose`, `-v`: show detailed output.
+- `--path`, `-p`: target directory, taking precedence over a positional directory.
+- `--ext`, `-e`: extension to process; repeatable.
+- `--max-files`: prompt before scanning more than this number of files.
+- `--workers`: parallel worker count; `0` auto-detects CPU cores.
+- `--no-parallel`: process sequentially.
+- `--sample-size`: sample size before a full scan.
+- `--skip-sampling`: skip the sampling phase.
+- `--log-file`: write logs to a specific file.
+
+Default logs are written under `~/.file-assoc/logs`.
+
+## Just recipes
+
+```bash path=null start=null
+just --list
+just check-deps
 just setup-file-associations
-
-# Reset with custom directory
-just reset-file-associations ~/Downloads
-
-# Dry run preview
-just reset-file-associations-preview ~/Documents
-
-# Quick test
-just test
+just reset-file-associations-preview ~/Downloads
+just test-all
 ```
 
-## 📈 Performance Tips
+## Development
 
-1. **Use parallel processing** (default, auto-detected)
-2. **Let sampling optimize** (default, skips clean directories)
-3. **For large directories**: Use `--workers 16` on high-core machines
-4. **For targeted resets**: Use `--ext` to process specific extensions only
-5. **Monitor progress**: The script shows real-time throughput and ETAs
+Run static checks:
 
-## 🐛 Troubleshooting
-
-### Script not found
-```bash
-# Make sure scripts are executable
-chmod +x bin/file-assoc-*
-chmod +x scripts/reset-file-associations.sh
+```bash path=null start=null
+just quality
 ```
 
-### duti not installed
-```bash
-brew install duti
+Run tests (BATS):
+
+```bash path=null start=null
+just install-bats      # one-time: bats-core + helper libraries
+just test-integration  # runs test/integration/*.bats
 ```
 
-### Permission errors
-```bash
-# The script needs read access to scan files
-# And write access to remove extended attributes
-# Try with sudo if needed (not recommended for home directories)
-```
+The BATS suite lives in `test/`, with shared setup in `test/helpers/test_helper.bash`. Tests use isolated temporary sandboxes (`_common_setup`/`_common_teardown`) and never modify real user files.
 
-### Verify associations
-```bash
-# Check current association for a file
+## Configuration
+
+`config/macos-file-associations.duti` maps common development files to Visual Studio Code (bundle ID `com.microsoft.VSCode`). Edit it with `file-assoc-setup --configure`, then re-apply with `file-assoc-setup`.
+
+Check the current handler for an extension:
+
+```bash path=null start=null
 duti -x md
-
-# Check per-file override
-xattr -l ~/file.md | grep LaunchServices
 ```
 
-## 🔗 Related Tools
+Check whether a file has a per-file override:
 
-- **duti** - Command-line tool to set default applications
-- **lsregister** - Launch Services database management
-- **xattr** - Extended attribute manipulation
+```bash path=null start=null
+xattr -l path/to/file.md | grep LaunchServices
+```
 
-## 📝 Notes
+## Note on `error -50` / skipped extensions
 
-- System-wide changes take effect immediately
-- Per-file resets require file to be "closed" to take effect
-- Finder may cache associations briefly
-- Some system-protected files cannot be modified
-- The script respects `.gitignore` patterns when present
+`file-assoc-setup` prints a summary like `Applied: N` / `Skipped: M`. Skipped extensions are those that resolve only to a macOS *dynamic UTI* (`dyn.…`); `duti` cannot set a default handler for them and macOS returns `error -50`. This is a macOS/Launch Services limitation, not a config error — the rest of the mappings still apply.
 
-## 🎉 Features
-
-### Recent Enhancements
-- ✅ Realistic ETA calculations based on batch timing
-- ✅ Smooth progress bar animations with adaptive catch-up
-- ✅ Performance metrics report (per-extension + top 5 fastest/slowest)
-- ✅ Fixed spinner animation during file scanning
-- ✅ Improved table formatting for long extension names
-- ✅ macOS-compatible millisecond timestamps
-- ✅ Batch-specific timing for accurate rate calculations
-
-### Core Features
-- ✅ Smart sampling to skip clean directories
-- ✅ Parallel processing with auto-detection
-- ✅ Comprehensive logging with timestamps
-- ✅ Dry-run mode for safe testing
-- ✅ Color-coded output
-- ✅ Resource monitoring (memory, disk space)
-- ✅ Graceful error handling
-- ✅ Progress persistence across interruptions
-
----
-
-**Version:** 1.0.0
-**Author:** Tyler Austin
-**Last Updated:** 2025-11-11
+To bind a skipped type to an app anyway, use Finder: right-click a file of that type -> **Open With -> Other -> (app) -> Always Open With** (or Get Info -> "Open with" -> "Change All…"), which works where the `duti` API does not.

@@ -7,12 +7,12 @@
 
 ## Executive Summary
 
-This analysis reveals that **0% of files** in the dotfiles repository have custom file associations (the `com.apple.LaunchServices.OpenWith` extended attribute), making the current script approach inefficient. The script checks 1,540 files but finds zero files needing modification.
+This analysis reveals that development directories often have very few custom file associations (the `com.apple.LaunchServices.OpenWith` extended attribute), making a blind full scan inefficient when no files need modification.
 
 **Key Findings:**
 - Launch Services uses a two-tier system: system-wide defaults + per-file overrides
 - Current script scans all files to find per-file overrides
-- In dotfiles: 1,036 .md files + 504 .sh files = **0 files with custom associations**
+- In the original development-directory sample: 1,036 .md files + 504 .sh files = **0 files with custom associations**
 - Optimization opportunity: Add sampling/early detection to skip unnecessary work
 
 ---
@@ -280,7 +280,7 @@ Continue with full scan? (y/N)
 # Output
 File Association Analysis
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Directory: /Users/austyle/Danti/dotfiles
+Directory: <target directory>
 Extensions: .md, .sh, .json, .ts, .js
 
 Sampling Phase (100 files):
@@ -379,7 +379,7 @@ graph TD
 3. **Enhance Reporting**
    - Show hit rate in final summary
    - Add "Efficiency" metric (files_modified / files_scanned)
-   - Store statistics in Neo4j for trend analysis
+   - Keep run logs for trend analysis
    - Estimated implementation: 40 minutes
 
 ### 6.2 Future Enhancements
@@ -407,7 +407,7 @@ graph TD
 
 ## 7. Conclusion
 
-The research into macOS Launch Services reveals that our current script is **highly inefficient for the dotfiles use case**, processing 1,540 files with a 0% hit rate. By adding adaptive sampling and statistics, we can:
+The research into macOS Launch Services reveals that full scans can be **highly inefficient for clean development directories**, especially when thousands of files have a 0% hit rate. By adding adaptive sampling and statistics, we can:
 
 - **Save time:** Skip unnecessary scans when hit rate is 0%
 - **Improve UX:** Show users meaningful statistics
@@ -436,7 +436,7 @@ SAMPLE_THRESHOLD=0.05        # Minimum 5% hit rate to proceed
 ```
 
 #### New Functions
-1. **`sample_files_for_extension()`** - Random file sampling using `shuf`
+1. **`sample_files_for_extension()`** - Random file sampling using `shuf`, `gshuf`, or a portable `awk` fallback
 2. **`analyze_sample()`** - Calculates hit rate from sampled files
 3. **`check_sampling_results()`** - Prompts user if 0% hit rate detected
 
@@ -446,8 +446,8 @@ SAMPLE_THRESHOLD=0.05        # Minimum 5% hit rate to proceed
 
 ### 8.2 Test Results
 
-#### Test 1: Dotfiles Repository (0% Hit Rate)
-**Location:** `/Users/austyle/Danti/dotfiles`
+#### Test 1: Development Repository (0% Hit Rate)
+**Location:** development repository sample
 
 ```
 Total files: 1,541 (.md: 1,037, .sh: 504)
@@ -460,7 +460,7 @@ Result: Sampling correctly identified no custom associations
 **Behavior:** Script warned "Sample size (49) is small but shows 0% hit rate" and proceeded with full scan for thoroughness.
 
 #### Test 2: Downloads Directory (1.01% Hit Rate)
-**Location:** `/Users/austyle/Downloads`
+**Location:** user Downloads directory
 
 ```
 Total files: 122 (.md: 44, .sh: 78)
@@ -474,8 +474,8 @@ Result: ✅ Sampling prediction accurate!
 
 **Behavior:** Sampling correctly detected custom associations, estimated count matched actual, proceeded with full scan.
 
-#### Test 3: /tmp Directory (No Files)
-**Location:** `/tmp`
+#### Test 3: Empty Temporary Directory (No Files)
+**Location:** temporary test directory
 
 ```
 Total files: 0
@@ -487,7 +487,7 @@ Result: Sampling skipped (file count < 50)
 ### 8.3 Performance Impact
 
 **Before Sampling Phase:**
-- Dotfiles: ~7s to scan all 1,541 files with 0% hit rate
+- Development repository sample: ~7s to scan all 1,541 files with 0% hit rate
 - No early warning about wasted effort
 
 **After Sampling Phase:**

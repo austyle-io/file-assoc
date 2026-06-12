@@ -1,374 +1,157 @@
-# macOS File Association Management
-# Standalone justfile for file-assoc tools
+# macOS file association management
 
-# Color codes for output
 CYAN := '\033[0;36m'
 GREEN := '\033[0;32m'
 YELLOW := '\033[1;33m'
 RED := '\033[0;31m'
-NC := '\033[0m'  # No Color
+NC := '\033[0m'
 
 # Show available commands
 default:
     @just --list
 
-# ============================================================================
-# DEPENDENCY MANAGEMENT
-# ============================================================================
-
-# Install all dependencies via Homebrew
+# Install required Homebrew dependencies
 install-deps:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo -e "{{CYAN}}📦 Installing dependencies...{{NC}}"
-    if ! command -v brew &>/dev/null; then
-        echo -e "{{RED}}❌ Homebrew not installed. Install from https://brew.sh{{NC}}"
-        exit 1
+    printf '%b\n' "{{CYAN}}Installing file-assoc dependencies...{{NC}}"
+    if ! command -v brew > /dev/null 2>&1; then
+      printf '%b\n' "{{RED}}Homebrew is not installed. Install it from https://brew.sh first.{{NC}}" >&2
+      exit 1
     fi
-    brew bundle install
-    echo -e "{{GREEN}}✅ Dependencies installed{{NC}}"
+    brew bundle install --file=Brewfile
+    printf '%b\n' "{{GREEN}}Dependencies installed.{{NC}}"
 
-# Check if all required tools are installed
+# Install just the BATS test stack (core + helper libraries)
+install-bats:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v brew > /dev/null 2>&1; then
+      printf '%s\n' "Homebrew is required to install bats. See https://brew.sh" >&2
+      exit 1
+    fi
+    brew tap bats-core/bats-core
+    brew install bats-core bats-support bats-assert bats-file
+
+# Check required commands
 check-deps:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo -e "{{CYAN}}🔍 Checking dependencies...{{NC}}"
-    MISSING=0
-    for tool in duti just shellcheck shfmt; do
-        if command -v "$tool" &>/dev/null; then
-            echo -e "{{GREEN}}✓{{NC}} $tool"
-        else
-            echo -e "{{RED}}✗{{NC}} $tool (missing)"
-            MISSING=1
-        fi
+    printf '%b\n' "{{CYAN}}Checking dependencies...{{NC}}"
+    missing=0
+    for tool in bash bats bc duti just perl shellcheck shfmt xattr; do
+      if command -v "$tool" > /dev/null 2>&1; then
+        printf '%b\n' "{{GREEN}}✓{{NC}} $tool"
+      else
+        printf '%b\n' "{{RED}}✗{{NC}} $tool"
+        missing=1
+      fi
     done
-    if [ $MISSING -eq 1 ]; then
-        echo ""
-        echo -e "{{YELLOW}}Install missing dependencies with: just install-deps{{NC}}"
-        exit 1
+    if [[ $missing -ne 0 ]]; then
+      printf '\n%b\n' "{{YELLOW}}Install missing dependencies with: just install-deps{{NC}}"
+      exit 1
     fi
-    echo -e "{{GREEN}}✅ All dependencies installed{{NC}}"
+    printf '%b\n' "{{GREEN}}All required commands are available.{{NC}}"
 
-# Update Brewfile from currently installed tools
-brewfile-update:
-    @echo -e "{{CYAN}}📦 Updating Brewfile...{{NC}}"
-    @brew bundle dump --force
-    @echo -e "{{GREEN}}✅ Brewfile updated{{NC}}"
-
-# ============================================================================
-# LINTING & FORMATTING
-# ============================================================================
-
-# Run shellcheck on all shell scripts
-lint:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    echo -e "{{CYAN}}🔍 Running shellcheck...{{NC}}"
-    if ! command -v shellcheck &>/dev/null; then
-        echo -e "{{RED}}❌ shellcheck not installed. Run: just install-deps{{NC}}"
-        exit 1
-    fi
-
-    ERRORS=0
-    for script in scripts/*.sh bin/*; do
-        if [ -f "$script" ] && head -1 "$script" | grep -q "^#!.*sh"; then
-            echo -e "{{CYAN}}Checking: $script{{NC}}"
-            if shellcheck "$script"; then
-                echo -e "{{GREEN}}✓ $script{{NC}}"
-            else
-                ERRORS=1
-            fi
-        fi
-    done
-
-    if [ $ERRORS -eq 1 ]; then
-        echo -e "{{RED}}❌ Shellcheck found issues{{NC}}"
-        exit 1
-    fi
-    echo -e "{{GREEN}}✅ All scripts passed shellcheck{{NC}}"
-
-# Format all shell scripts with shfmt
+# Format shell scripts (.bats files use bats syntax and are excluded)
 format:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo -e "{{CYAN}}🎨 Formatting shell scripts...{{NC}}"
-    if ! command -v shfmt &>/dev/null; then
-        echo -e "{{RED}}❌ shfmt not installed. Run: just install-deps{{NC}}"
-        exit 1
-    fi
+    shfmt -w -i 2 -bn -ci -sr bin/* scripts/*.sh
 
-    # Format with: 2-space indent, binary ops on next line, case indent, space redirects
-    shfmt -w -i 2 -bn -ci -sr scripts/*.sh bin/*
-    echo -e "{{GREEN}}✅ Scripts formatted{{NC}}"
-
-# Check formatting without modifying files
+# Check shell script formatting
 format-check:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo -e "{{CYAN}}🔍 Checking shell script formatting...{{NC}}"
-    if ! command -v shfmt &>/dev/null; then
-        echo -e "{{RED}}❌ shfmt not installed. Run: just install-deps{{NC}}"
-        exit 1
-    fi
+    shfmt -d -i 2 -bn -ci -sr bin/* scripts/*.sh
 
-    if shfmt -d -i 2 -bn -ci -sr scripts/*.sh bin/*; then
-        echo -e "{{GREEN}}✅ All scripts properly formatted{{NC}}"
-    else
-        echo -e "{{RED}}❌ Some scripts need formatting. Run: just format{{NC}}"
-        exit 1
-    fi
+# Run ShellCheck (.bats files use bats syntax and are excluded)
+lint:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    shellcheck bin/* scripts/*.sh
 
-# Run all quality checks (lint + format-check)
-quality:
-    @echo -e "{{CYAN}}🎯 Running quality checks...{{NC}}"
-    @just lint
-    @just format-check
-    @echo -e "{{GREEN}}✅ All quality checks passed{{NC}}"
+# Run static checks
+quality: format-check lint
 
-# Alias: short form for quality
+# Alias for quality
 q: quality
 
-# ============================================================================
-# CODE GENERATION
-# ============================================================================
-
-# Generate argument parser from Argbash template
-generate-parser:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    echo -e "{{CYAN}}🔧 Generating argument parser...{{NC}}"
-
-    if ! command -v argbash &>/dev/null; then
-        echo -e "{{RED}}❌ argbash not installed{{NC}}"
-        echo ""
-        echo "Install argbash using one of these methods:"
-        echo "  1. brew install argbash"
-        echo "  2. brew bundle install  # Install all dependencies"
-        echo ""
-        exit 1
-    fi
-
-    ./templates/generate-parser.sh
-
-# Check if argument parser needs regeneration
-check-parser:
-    #!/usr/bin/env bash
-    set -euo pipefail
-
-    TEMPLATE="templates/reset-args.m4"
-    PARSER="lib/args-parser.sh"
-
-    if [ ! -f "$PARSER" ]; then
-        echo -e "{{YELLOW}}⚠️  Argument parser not generated yet{{NC}}"
-        echo "   Run: just generate-parser"
-        exit 1
-    fi
-
-    if [ "$TEMPLATE" -nt "$PARSER" ]; then
-        echo -e "{{YELLOW}}⚠️  Template is newer than generated parser{{NC}}"
-        echo "   Run: just generate-parser"
-        exit 1
-    fi
-
-    echo -e "{{GREEN}}✅ Argument parser is up to date{{NC}}"
-
-# ============================================================================
-# FILE ASSOCIATION MANAGEMENT
-# ============================================================================
-
-# Apply system-wide file associations
+# Apply system-wide file associations with duti
 setup-file-associations:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🔗 Setting up macOS file associations..."
-
-    # Check if duti is installed
-    if ! command -v duti &>/dev/null; then
-        echo "❌ duti is not installed. Please install it first:"
-        echo "   brew install duti"
-        exit 1
+    config="config/macos-file-associations.duti"
+    if ! command -v duti > /dev/null 2>&1; then
+      printf '%s\n' "duti is not installed. Run: just install-deps" >&2
+      exit 1
+    fi
+    if [[ ! -f "$config" ]]; then
+      printf '%s\n' "Missing $config" >&2
+      exit 1
     fi
 
-    # Check if config file exists
-    if [ ! -f "config/macos-file-associations.duti" ]; then
-        echo "❌ Configuration file not found: config/macos-file-associations.duti"
-        exit 1
+    # Apply each mapping individually so we can summarize the result. duti emits
+    # 'error -50' for extensions that resolve only to a dynamic UTI, which macOS
+    # refuses to set a default handler for. Those are expected and non-fatal, so
+    # we count them as skipped and only surface genuinely unexpected errors.
+    applied=0
+    skipped=0
+    unexpected=0
+    skipped_list=()
+    err_file="$(mktemp)"
+    trap 'rm -f "$err_file"' EXIT
+
+    while read -r bundle token role; do
+      [[ -z "${bundle:-}" || "$bundle" == \#* ]] && continue
+      [[ -z "${token:-}" || -z "${role:-}" ]] && continue
+
+      if duti -s "$bundle" "$token" "$role" 2> "$err_file"; then
+        applied=$((applied + 1))
+      elif grep -q 'error -50' "$err_file"; then
+        skipped=$((skipped + 1))
+        skipped_list+=("$token")
+      else
+        unexpected=$((unexpected + 1))
+        sed 's/^/  duti: /' "$err_file" >&2
+      fi
+    done < "$config"
+
+    printf '\n%b\n' "{{GREEN}}Applied: ${applied}{{NC}}"
+    printf '%b\n' "{{YELLOW}}Skipped (dynamic UTI, not settable via duti on macOS): ${skipped}{{NC}}"
+    if [[ $skipped -gt 0 ]]; then
+      printf '  %s\n' "${skipped_list[*]}"
+      printf '  %s\n' "To set these, use Finder: right-click a file -> Open With -> Other -> Visual Studio Code -> Always Open With."
+    fi
+    if [[ $unexpected -gt 0 ]]; then
+      printf '%b\n' "{{RED}}Unexpected errors: ${unexpected} (see duti output above){{NC}}" >&2
+      exit 1
     fi
 
-    # Apply file associations
-    echo "📝 Applying file associations from config/macos-file-associations.duti..."
-    duti config/macos-file-associations.duti
-
-    echo "✅ File associations applied successfully!"
-    echo ""
-    echo "Note: Changes take effect immediately for new files."
-    echo "To reset existing files: just reset-file-associations"
-
-# Reset file associations for existing files
+# Reset per-file overrides in DIR
 reset-file-associations DIR="." *ARGS="":
     #!/usr/bin/env bash
     set -euo pipefail
     ./scripts/reset-file-associations.sh {{ARGS}} "{{DIR}}"
 
-# Reset file associations (dry run preview)
+# Preview reset behavior without modifying files
 reset-file-associations-preview DIR=".":
     #!/usr/bin/env bash
     set -euo pipefail
-    ./scripts/reset-file-associations.sh --dry-run --verbose "{{DIR}}"
+    ./scripts/reset-file-associations.sh --dry-run --verbose --no-confirm "{{DIR}}"
 
-# Reset file associations using v2 script (modular implementation)
-reset-v2 DIR="." *ARGS="":
-    #!/usr/bin/env bash
-    set -euo pipefail
-    ./scripts/reset-file-associations-v2.sh {{ARGS}} "{{DIR}}"
-
-# Reset file associations v2 (dry run preview)
-reset-v2-preview DIR=".":
-    #!/usr/bin/env bash
-    set -euo pipefail
-    ./scripts/reset-file-associations-v2.sh --dry-run --verbose "{{DIR}}"
-
-# Quick test with current directory
-test:
-    @echo "🧪 Testing file association reset (dry run)..."
-    @just reset-file-associations-preview .
-
-# Run unit tests for library modules
-test-unit:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    echo -e "{{CYAN}}🧪 Running unit tests...{{NC}}"
-    echo ""
-
-    TEST_FAILURES=0
-
-    # Run core library tests
-    if [ -f tests/test-core.sh ]; then
-        echo -e "{{CYAN}}Testing lib/core.sh...{{NC}}"
-        if bash -c 'source lib/core.sh && source tests/test-core.sh && main' 2>&1 | grep -v "readonly variable"; then
-            echo ""
-        else
-            TEST_FAILURES=$((TEST_FAILURES + 1))
-        fi
-    fi
-
-    # Run UI library tests
-    if [ -f tests/test-ui.sh ]; then
-        echo -e "{{CYAN}}Testing lib/ui.sh...{{NC}}"
-        if bash tests/test-ui.sh 2>&1 | grep -v "readonly variable"; then
-            echo ""
-        else
-            TEST_FAILURES=$((TEST_FAILURES + 1))
-        fi
-    fi
-
-    # Run logging library tests
-    if [ -f tests/test-logging.sh ]; then
-        echo -e "{{CYAN}}Testing lib/logging.sh...{{NC}}"
-        if bash tests/test-logging.sh 2>&1 | grep -v "readonly variable"; then
-            echo ""
-        else
-            TEST_FAILURES=$((TEST_FAILURES + 1))
-        fi
-    fi
-
-    # Run files library tests
-    if [ -f tests/test-files.sh ]; then
-        echo -e "{{CYAN}}Testing lib/files.sh...{{NC}}"
-        if bash tests/test-files.sh 2>&1 | grep -v "readonly variable"; then
-            echo ""
-        else
-            TEST_FAILURES=$((TEST_FAILURES + 1))
-        fi
-    fi
-
-    # Run xattr library tests
-    if [ -f tests/test-xattr.sh ]; then
-        echo -e "{{CYAN}}Testing lib/xattr.sh...{{NC}}"
-        if bash tests/test-xattr.sh 2>&1 | grep -v "readonly variable"; then
-            echo ""
-        else
-            TEST_FAILURES=$((TEST_FAILURES + 1))
-        fi
-    fi
-
-    # Run metrics library tests
-    if [ -f tests/test-metrics.sh ]; then
-        echo -e "{{CYAN}}Testing lib/metrics.sh...{{NC}}"
-        if bash tests/test-metrics.sh 2>&1 | grep -v "readonly variable"; then
-            echo ""
-        else
-            TEST_FAILURES=$((TEST_FAILURES + 1))
-        fi
-    fi
-
-    # Run parallel library tests
-    if [ -f tests/test-parallel.sh ]; then
-        echo -e "{{CYAN}}Testing lib/parallel.sh...{{NC}}"
-        if bash tests/test-parallel.sh 2>&1 | grep -v "readonly variable"; then
-            echo ""
-        else
-            TEST_FAILURES=$((TEST_FAILURES + 1))
-        fi
-    fi
-
-    # Summary
-    if [ $TEST_FAILURES -eq 0 ]; then
-        echo -e "{{GREEN}}✅ All unit tests completed successfully{{NC}}"
-    else
-        echo -e "{{RED}}❌ $TEST_FAILURES test suite(s) failed{{NC}}"
-        exit 1
-    fi
-
-# Run integration tests for main script
+# Run the BATS integration suite for the shipped entrypoints
 test-integration:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo -e "{{CYAN}}🧪 Running integration tests...{{NC}}"
-    echo ""
-
-    if [ ! -f tests/integration/test-main-script.sh ]; then
-        echo -e "{{RED}}❌ Integration tests not found{{NC}}"
-        exit 1
+    if ! command -v bats > /dev/null 2>&1; then
+      printf '%s\n' "bats is not installed. Run: just install-bats" >&2
+      exit 1
     fi
+    bats --recursive test/integration
 
-    bash tests/integration/test-main-script.sh
+# Run the default test suite
+test: test-integration
 
-# Run all tests (unit + integration)
-test-all:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    echo -e "{{CYAN}}🧪 Running all tests...{{NC}}"
-    echo ""
-
-    just test-unit
-    echo ""
-    just test-integration
-
-    echo ""
-    echo -e "{{GREEN}}✅ All tests completed successfully{{NC}}"
-
-# ============================================================================
-# PROJECT MANAGEMENT
-# ============================================================================
-
-# Setup GitHub project and issues for refactoring
-setup-github-project:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    echo -e "{{CYAN}}🚀 Setting up GitHub project for refactoring...{{NC}}"
-
-    if ! command -v gh &>/dev/null; then
-        echo -e "{{RED}}❌ gh CLI not installed. Install with: brew install gh{{NC}}"
-        exit 1
-    fi
-
-    if ! gh auth status &>/dev/null; then
-        echo -e "{{RED}}❌ Not authenticated. Run: gh auth login{{NC}}"
-        exit 1
-    fi
-
-    ./scripts/setup-github-project.sh
-    echo -e "{{GREEN}}✅ GitHub project setup complete!{{NC}}"
-    echo -e "{{CYAN}}View project: gh project list --owner austyle-io{{NC}}"
-    echo -e "{{CYAN}}View issues: gh issue list --label refactoring{{NC}}"
+# Run all checks and tests
+test-all: quality test-integration

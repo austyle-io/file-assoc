@@ -23,7 +23,7 @@ OPTIONS:
                              Open configuration file in editor
 
 DESCRIPTION:
-    Applies system-wide file associations from the dotfiles configuration
+    Applies system-wide file associations from this repo's configuration
     using duti. This sets default applications for file types like .md, .sh,
     .json, .ts, .js, etc.
 

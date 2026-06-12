@@ -1,102 +1,62 @@
-# Installation Guide
+# Installation
 
-## Quick Install
+## 1. Install dependencies
 
-### 1. Add to PATH
-
-Add the `bin/` directory to your PATH for easy access from anywhere:
-
-```bash
-# Add to your ~/.zshrc or ~/.bashrc
-export PATH="/Users/austyle/austyle-io/file-assoc/bin:$PATH"
+```bash path=null start=null
+brew bundle install --file=Brewfile
 ```
 
-Then reload your shell:
-```bash
-source ~/.zshrc  # or ~/.bashrc
+Or install the runtime requirements manually:
+
+```bash path=null start=null
+brew install bash bc duti
 ```
 
-### 2. Verify Installation
+`just`, `shellcheck`, and `shfmt` are only needed for development tasks. Install the BATS test stack with `just install-bats` (or `brew install bats-core bats-support bats-assert bats-file`).
 
-```bash
+## 2. Add the commands to PATH
+
+Add this repo's `bin/` directory to your shell startup file:
+
+```bash path=null start=null
+export PATH="/Users/tyleraustin/Github/file-assoc/bin:$PATH"
+```
+
+Reload your shell, then verify:
+
+```bash path=null start=null
 which file-assoc-setup
 which file-assoc-reset
-```
-
-Should both return paths in `/Users/austyle/austyle-io/file-assoc/bin/`
-
-### 3. Test Commands
-
-```bash
 file-assoc-setup --help
 file-assoc-reset --help
 ```
 
-## Alternative: Use Just Recipes
+## 3. Apply and reset
 
-If you prefer not to modify PATH:
+Apply system-wide file associations:
 
-```bash
-cd /Users/austyle/austyle-io/file-assoc
+```bash path=null start=null
+file-assoc-setup
+```
 
-# Show available commands
-just
+Preview reset behavior before changing xattrs:
 
-# Apply system-wide associations
+```bash path=null start=null
+file-assoc-reset --dry-run --verbose ~/Downloads
+```
+
+Clear per-file overrides after review:
+
+```bash path=null start=null
+file-assoc-reset ~/Downloads
+```
+
+## Alternative: use just
+
+From the repo root:
+
+```bash path=null start=null
 just setup-file-associations
-
-# Reset per-file overrides
+just reset-file-associations-preview ~/Downloads
 just reset-file-associations ~/Downloads
-
-# Dry run preview
-just reset-file-associations-preview ~/Documents
 ```
-
-## Standalone Operation
-
-This directory is completely self-contained and portable:
-- All wrapper scripts use relative paths
-- No dependencies on dotfiles directory
-- Works from any location when added to PATH
-- Works with symlinks
-
-## What Was Copied
-
-From `/Users/austyle/Danti/dotfiles/`:
-
-```
-✓ scripts/reset-file-associations.sh   → scripts/
-✓ bin/file-assoc-setup                 → bin/
-✓ bin/file-assoc-reset                 → bin/
-✓ config/macos-file-associations.duti  → config/
-✓ docs/LAUNCH_SERVICES_ANALYSIS.md     → docs/
-+ justfile                              → (extracted recipes)
-+ README.md                             → (comprehensive guide)
-```
-
-All scripts maintain their executable permissions and work independently.
-
-## Prerequisites
-
-- **macOS** (uses Launch Services)
-- **duti** - Install with: `brew install duti`
-- **just** (optional) - Install with: `brew install just`
-
-## Next Steps
-
-1. **Review configuration:**
-   ```bash
-   file-assoc-setup --configure
-   ```
-
-2. **Apply system-wide defaults:**
-   ```bash
-   file-assoc-setup
-   ```
-
-3. **Reset existing files:**
-   ```bash
-   file-assoc-reset ~/Downloads
-   ```
-
-See `README.md` for complete documentation.

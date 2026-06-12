@@ -48,7 +48,7 @@ SAMPLE_THRESHOLD=0.05 # Minimum hit rate to proceed (5%)
 
 # Logging configuration
 LOG_LEVEL="${FILE_ASSOC_LOG_LEVEL:-INFO}" # DEBUG, INFO, WARN, ERROR
-LOG_DIR="${HOME}/.dotfiles-logs"
+LOG_DIR="${FILE_ASSOC_LOG_DIR:-${HOME}/.file-assoc/logs}"
 LOG_FILE=""
 LOG_BUFFER=()
 LOG_BUFFER_SIZE=100
@@ -421,6 +421,15 @@ handle_signal() {
 QUIT_MONITOR_PID=""
 
 start_quit_monitor() {
+  # Only enable interactive 'q' cancellation when attached to a real terminal.
+  # In non-interactive contexts (CI, pipes, command substitution) starting this
+  # background reader would put the TTY into raw mode and hold the script's
+  # stdout open, which hangs callers that capture output. Skip it instead.
+  if [[ ! -t 0 ]] || [[ ! -t 1 ]]; then
+    QUIT_MONITOR_PID=""
+    return 0
+  fi
+
   # Start a background process that monitors for 'q' key
   (
     # Save terminal settings
@@ -463,6 +472,19 @@ stop_quit_monitor() {
 trap 'handle_signal SIGINT' SIGINT
 trap 'handle_signal SIGTERM' SIGTERM
 trap 'handle_signal SIGQUIT' SIGQUIT
+
+# Reap background helpers and restore the terminal on any exit. This guarantees
+# a captured or non-interactive invocation never hangs on a lingering background
+# process that holds the output pipe open, even if the script exits early.
+# shellcheck disable=SC2329  # Invoked indirectly via trap EXIT
+reap_on_exit() {
+  [[ -n "${SPINNER_PID:-}" ]] && kill "$SPINNER_PID" 2> /dev/null
+  [[ -n "${QUIT_MONITOR_PID:-}" ]] && kill "$QUIT_MONITOR_PID" 2> /dev/null
+  [[ -n "${PROGRESS_MONITOR_PID:-}" ]] && kill "$PROGRESS_MONITOR_PID" 2> /dev/null
+  [[ -t 0 ]] && stty sane 2> /dev/null
+  return 0
+}
+trap reap_on_exit EXIT
 
 # ============================================================================
 # THROTTLING & RATE LIMITING
@@ -688,7 +710,7 @@ process_file() {
   local file=$1
   local ext=$2
 
-  ((total_files++))
+  total_files=$((total_files + 1))
 
   # Check memory every 100 files
   if [[ $((total_files % 100)) -eq 0 ]]; then
@@ -700,7 +722,7 @@ process_file() {
 
   # Check if file has LaunchServices extended attribute
   if xattr "$file" 2> /dev/null | grep -q "com.apple.LaunchServices.OpenWith"; then
-    ((files_with_attrs++))
+    files_with_attrs=$((files_with_attrs + 1))
 
     log_debug "CHECK" "FILE=$file HAS_ATTR=true"
 
@@ -711,14 +733,14 @@ process_file() {
     # Clear the attribute (unless dry run)
     if [[ "$DRY_RUN" = false ]]; then
       if xattr -d com.apple.LaunchServices.OpenWith "$file" 2> /dev/null; then
-        ((files_cleared++))
+        files_cleared=$((files_cleared + 1))
         log_info "CLEAR" "FILE=$file RESULT=success"
 
         if [[ "$VERBOSE" = true ]]; then
           printf '%b\n' "    ${GREEN}✓${NC} Cleared association"
         fi
       else
-        ((errors++))
+        errors=$((errors + 1))
         log_error "CLEAR" "FILE=$file RESULT=failed ERROR=xattr_failed"
         printf '%b\n' "    ${RED}✗${NC} Failed to clear association" >&2
       fi
@@ -789,26 +811,6 @@ monitor_parallel_progress() {
   done
 }
 
-# Process files in parallel using xargs
-# Build find predicates for all extensions at once (single-pass optimization)
-build_find_predicates() {
-  local result=""
-  local first=true
-
-  for ext in "${EXTENSIONS[@]}"; do
-    ext="${ext#.}"
-
-    if [[ "$first" == true ]]; then
-      result="-name \\*.${ext}"
-      first=false
-    else
-      result="$result -o -name \\*.${ext}"
-    fi
-  done
-
-  printf '%s' "$result"
-}
-
 # Enhanced worker that tags output with extension
 # shellcheck disable=SC2329  # Called indirectly via bash -c in process_files_single_pass()
 process_file_worker_with_ext() {
@@ -872,8 +874,9 @@ process_files_single_pass() {
     fi
   done
 
-  # Single find command for ALL files, process immediately
-  # Inline worker logic to avoid function export issues
+  # Single find command for ALL files, process immediately.
+  # Inline worker logic uses single quotes so variables expand inside the worker shell.
+  # shellcheck disable=SC2016
   find "$TARGET_DIR" -type f \( "${find_args[@]}" \) -print0 2> /dev/null \
     | xargs -0 -P "$WORKERS" -n "$CHUNK_SIZE" sh -c '
       results_dir="$1"
@@ -1085,7 +1088,7 @@ count_files_for_extension() {
     # Count files and update count file
     local count=0
     while IFS= read -r file; do
-      ((count++))
+      count=$((count + 1))
       printf '%s\n' "$count" > "$count_file"
     done < <(find "$TARGET_DIR" -type f -name "*.${ext}" 2> /dev/null)
 
@@ -1124,9 +1127,31 @@ sample_files_for_extension() {
     find "$TARGET_DIR" -type f -name "*.${ext}" 2> /dev/null
     return
   fi
-
-  # Use shuf to randomly sample files
-  find "$TARGET_DIR" -type f -name "*.${ext}" 2> /dev/null | shuf -n "$sample_size"
+  # Prefer GNU shuf when available. Homebrew coreutils installs gshuf on macOS.
+  if command -v shuf > /dev/null 2>&1; then
+    find "$TARGET_DIR" -type f -name "*.${ext}" 2> /dev/null | shuf -n "$sample_size"
+  elif command -v gshuf > /dev/null 2>&1; then
+    find "$TARGET_DIR" -type f -name "*.${ext}" 2> /dev/null | gshuf -n "$sample_size"
+  else
+    # Portable fallback: reservoir sampling with awk.
+    find "$TARGET_DIR" -type f -name "*.${ext}" 2> /dev/null | awk -v n="$sample_size" '
+      NR <= n {
+        sample[NR] = $0
+        next
+      }
+      {
+        j = int(rand() * NR) + 1
+        if (j <= n) {
+          sample[j] = $0
+        }
+      }
+      END {
+        for (i = 1; i <= n && i in sample; i++) {
+          print sample[i]
+        }
+      }
+    '
+  fi
 }
 
 # Analyze sample to calculate hit rate
@@ -1168,7 +1193,7 @@ analyze_sample() {
   local spinner_i=0
 
   while IFS= read -r file; do
-    ((sample_size_actual++))
+    sample_size_actual=$((sample_size_actual + 1))
 
     # Update spinner
     if [[ $((sample_size_actual % 5)) -eq 0 ]]; then
@@ -1179,7 +1204,7 @@ analyze_sample() {
 
     # Check for attribute
     if xattr "$file" 2> /dev/null | grep -q "com.apple.LaunchServices.OpenWith"; then
-      ((sample_with_attr++))
+      sample_with_attr=$((sample_with_attr + 1))
     fi
   done < "$temp_sample_file"
 
@@ -1269,7 +1294,11 @@ check_sampling_results() {
 
 # Get current timestamp in milliseconds (macOS compatible)
 get_timestamp_ms() {
-  python3 -c 'import time; print(int(time.time() * 1000))'
+  if command -v perl > /dev/null 2>&1; then
+    perl -MTime::HiRes=time -e 'printf "%.0f\n", time() * 1000'
+  else
+    printf '%s000\n' "$(date +%s)"
+  fi
 }
 
 # Record start of extension processing
