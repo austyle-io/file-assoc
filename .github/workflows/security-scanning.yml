@@ -47,7 +47,12 @@ jobs:
 
       - name: Run Shellcheck
         run: |
-          shellcheck -f gcc $(find . -type f \( -name '*.sh' -o -name '*.bash' \)) 2>&1 | tee shellcheck.log
+          mapfile -t files < <(find . -type f \( -name '*.sh' -o -name '*.bash' \))
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No shell scripts found to scan."
+            exit 0
+          fi
+          shellcheck -f gcc "${files[@]}" 2>&1 | tee shellcheck.log
         env:
           # SC1091: Not following sourced file (file not specified or not found)
           #   Many scripts use dynamic or optional sourcing (e.g., config includes), so we exclude SC1091 to avoid false positives.
@@ -122,17 +127,19 @@ jobs:
     steps:
       - name: Generate summary
         run: |
-          echo "## Security Scan Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Job Status" >> $GITHUB_STEP_SUMMARY
-          echo "- Shellcheck: ${{ needs.shellcheck.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Trivy Scan: ${{ needs.trivy-scan.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Secret Scan: ${{ needs.secret-scan.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [[ "${{ needs.shellcheck.result }}" == "failure" ]] || \
-             [[ "${{ needs.trivy-scan.result }}" == "failure" ]] || \
-             [[ "${{ needs.secret-scan.result }}" == "failure" ]]; then
-            echo ":warning: **Some security checks failed. Please review the logs above.**" >> $GITHUB_STEP_SUMMARY
-          else
-            echo ":white_check_mark: **All security checks passed!**" >> $GITHUB_STEP_SUMMARY
-          fi
+          {
+            echo "## Security Scan Results"
+            echo ""
+            echo "### Job Status"
+            echo "- Shellcheck: ${{ needs.shellcheck.result }}"
+            echo "- Trivy Scan: ${{ needs.trivy-scan.result }}"
+            echo "- Secret Scan: ${{ needs.secret-scan.result }}"
+            echo ""
+            if [[ "${{ needs.shellcheck.result }}" == "failure" ]] || \
+               [[ "${{ needs.trivy-scan.result }}" == "failure" ]] || \
+               [[ "${{ needs.secret-scan.result }}" == "failure" ]]; then
+              echo ":warning: **Some security checks failed. Please review the logs above.**"
+            else
+              echo ":white_check_mark: **All security checks passed!**"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
