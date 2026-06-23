@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   shell:
-    name: Shell checks
+    name: Quality gates
     runs-on: macos-latest
 
     steps:

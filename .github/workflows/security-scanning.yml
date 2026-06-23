@@ -1,0 +1,145 @@
+# Comprehensive Security Scanning Workflow
+# Performs multiple security checks including:
+# - Shellcheck for shell script analysis
+# - Trivy for vulnerability scanning
+# - Secret scanning
+# - Dependency checks
+
+name: Security Scanning
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "**.sh"
+      - "**.bash"
+      - "**.py"
+      - "**.json"
+      - "**.yml"
+      - "**.yaml"
+      - ".github/workflows/security-scanning.yml"
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Run daily at 2:00 UTC
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+# Ensure only one scan runs at a time
+concurrency:
+  group: security-scan-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least-privilege default; jobs that need more (e.g. trivy-scan) opt in below.
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    name: Shell Script Security Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Run Shellcheck
+        run: |
+          mapfile -t files < <(find . -type f \( -name '*.sh' -o -name '*.bash' \))
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No shell scripts found to scan."
+            exit 0
+          fi
+          shellcheck -f gcc "${files[@]}" 2>&1 | tee shellcheck.log
+        env:
+          # SC1091: Not following sourced file (file not specified or not found)
+          #   Many scripts use dynamic or optional sourcing (e.g., config includes), so we exclude SC1091 to avoid false positives.
+          SHELLCHECK_OPTS: -e SC1091
+
+      - name: Upload Shellcheck results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: shellcheck-results
+          path: shellcheck.log
+          retention-days: 30
+
+  trivy-scan:
+    name: Trivy Vulnerability Scanner
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH,MEDIUM"
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: "trivy-results.sarif"
+
+      - name: Upload Trivy results artifact
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: trivy-results
+          path: trivy-results.sarif
+          retention-days: 30
+
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog Secret Scan
+        uses: trufflesecurity/trufflehog@30d5bb91af1a771378349dbbb0c82129392acf70 # v3.95.6
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug
+
+  security-summary:
+    name: Security Scan Summary
+    runs-on: ubuntu-latest
+    needs: [shellcheck, trivy-scan, secret-scan]
+    if: always()
+
+    steps:
+      - name: Generate summary
+        run: |
+          {
+            echo "## Security Scan Results"
+            echo ""
+            echo "### Job Status"
+            echo "- Shellcheck: ${{ needs.shellcheck.result }}"
+            echo "- Trivy Scan: ${{ needs.trivy-scan.result }}"
+            echo "- Secret Scan: ${{ needs.secret-scan.result }}"
+            echo ""
+            if [[ "${{ needs.shellcheck.result }}" == "failure" ]] || \
+               [[ "${{ needs.trivy-scan.result }}" == "failure" ]] || \
+               [[ "${{ needs.secret-scan.result }}" == "failure" ]]; then
+              echo ":warning: **Some security checks failed. Please review the logs above.**"
+            else
+              echo ":white_check_mark: **All security checks passed!**"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
