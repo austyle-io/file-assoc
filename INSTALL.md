@@ -12,7 +12,13 @@ Or install the runtime requirements manually:
 brew install bash bc duti
 ```
 
-`just`, `shellcheck`, and `shfmt` are only needed for development tasks. Install the BATS test stack with `just install-bats` (or `brew install bats-core bats-support bats-assert bats-file`).
+`just`, `shellcheck`, and `shfmt` are only needed for development tasks. Install the BATS test stack with `just install-bats`, which installs the `bats-core` runner from Homebrew and initializes the vendored helper libraries.
+
+The BATS helper libraries (`bats-support`, `bats-assert`, `bats-file`) are vendored as version-pinned git submodules under `test/helpers/lib/` (no third-party Homebrew tap). If you cloned without `--recurse-submodules`, initialize them with:
+
+```bash path=null start=null
+git submodule update --init test/helpers/lib
+```
 
 ## 2. Add the commands to PATH
 

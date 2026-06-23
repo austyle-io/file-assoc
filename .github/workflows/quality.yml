@@ -20,6 +20,19 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
+          # Vendored bats helper libraries live in test/helpers/lib/ submodules.
+          submodules: true
+
+      - name: Verify Brewfile has no third-party taps
+        # Runs before any Homebrew install so a reintroduced tap can never be
+        # processed. Inlined (not `just check-brewfile`) because `just` itself
+        # is installed by the step below.
+        run: |
+          if grep -qE '^[[:space:]]*tap([[:space:]]|\()' Brewfile; then
+            echo "ERROR: Brewfile declares a third-party tap. Vendor it as a pinned submodule instead." >&2
+            grep -nE '^[[:space:]]*tap([[:space:]]|\()' Brewfile >&2
+            exit 1
+          fi
 
       - name: Install dependencies
         run: brew bundle install --file=Brewfile

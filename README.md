@@ -129,11 +129,11 @@ just quality
 Run tests (BATS):
 
 ```bash path=null start=null
-just install-bats      # one-time: bats-core + helper libraries
+just install-bats      # one-time: bats-core runner + init vendored helper submodules
 just test-integration  # runs test/integration/*.bats
 ```
 
-The BATS suite lives in `test/`, with shared setup in `test/helpers/test_helper.bash`. Tests use isolated temporary sandboxes (`_common_setup`/`_common_teardown`) and never modify real user files.
+The BATS suite lives in `test/`, with shared setup in `test/helpers/test_helper.bash`. The helper libraries (`bats-support`, `bats-assert`, `bats-file`) are vendored as version-pinned git submodules under `test/helpers/lib/` — no third-party Homebrew tap. Tests use isolated temporary sandboxes (`_common_setup`/`_common_teardown`) and never modify real user files.
 
 ## Configuration
 
