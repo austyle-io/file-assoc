@@ -40,7 +40,8 @@ reviews:
     - path: ".github/workflows/*.yml"
       instructions: |
         - quality.yml is the gating CI ("Quality gates"): keep it scoped to shell formatting, linting, and integration tests.
-        - security-scanning.yml, semgrep.yml, gitleaks.yml, and dependency-check.yml are intentionally non-gating defense-in-depth scanners (shellcheck, Trivy, TruffleHog, Semgrep, gitleaks, OWASP dependency-check); they may trigger on non-shell files and mirror the austdx-stack scanner set. dependency-check is a dormant placeholder until an NVD_API_KEY and scannable manifests exist.
+        - security-scanning.yml, semgrep.yml, and gitleaks.yml are intentionally non-gating defense-in-depth scanners (shellcheck, Trivy, TruffleHog, Semgrep, gitleaks); they may trigger on non-shell files and mirror the austdx-stack scanner set. (OWASP dependency-check was removed: file-assoc has only Homebrew deps, which it cannot analyze.)
+        - The bats helper libraries are vendored as version-pinned git submodules under test/helpers/lib/ to avoid third-party Homebrew taps. The Brewfile must contain no `tap` directives (enforced by `just check-brewfile`).
         - Pin ALL actions — including first-party actions/* — to full commit SHAs with a trailing version comment, matching austdx-stack. Keep workflow token permissions least-privilege.
   path_filters:
     - "!**/*.log"

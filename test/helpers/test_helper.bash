@@ -9,7 +9,14 @@
 # Load bats helper libraries
 # ---------------------------------------------------------------------------
 
-if [[ -n "${BATS_LIB_PATH:-}" ]] && [[ -d "${BATS_LIB_PATH}" ]]; then
+# Prefer the vendored, version-pinned helper libraries (git submodules under
+# test/helpers/lib/). This removes the third-party Homebrew tap from the trust
+# chain; the system locations below remain as a fallback when the submodules
+# have not been initialized.
+_HELPER_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib"
+if [[ -f "${_HELPER_LIB_DIR}/bats-support/load.bash" ]]; then
+  BATS_LIB_PREFIX="${_HELPER_LIB_DIR}"
+elif [[ -n "${BATS_LIB_PATH:-}" ]] && [[ -d "${BATS_LIB_PATH}" ]]; then
   BATS_LIB_PREFIX="${BATS_LIB_PATH}"
 elif [[ -d "/opt/homebrew/lib" ]]; then
   BATS_LIB_PREFIX="/opt/homebrew/lib"
@@ -50,7 +57,7 @@ if [[ -n "${BATS_LIB_PREFIX:-}" ]]; then
 
   if [[ ${#missing_libs[@]} -gt 0 ]]; then
     echo "ERROR: Missing BATS helper libraries: ${missing_libs[*]}" >&2
-    echo "Install with: just install-bats" >&2
+    echo "Initialize the vendored helpers with: git submodule update --init (or: just install-bats)" >&2
     exit 1
   fi
 else

@@ -22,16 +22,18 @@ install-deps:
     brew bundle install --file=Brewfile
     printf '%b\n' "{{GREEN}}Dependencies installed.{{NC}}"
 
-# Install just the BATS test stack (core + helper libraries)
+# Install the BATS test stack: the runner via Homebrew, helper libs via submodules
 install-bats:
     #!/usr/bin/env bash
     set -euo pipefail
     if ! command -v brew > /dev/null 2>&1; then
-      printf '%s\n' "Homebrew is required to install bats. See https://brew.sh" >&2
+      printf '%s\n' "Homebrew is required to install the bats runner. See https://brew.sh" >&2
       exit 1
     fi
-    brew tap bats-core/bats-core
-    brew install bats-core bats-support bats-assert bats-file
+    # Runner from the vetted homebrew/core tap (no third-party tap needed).
+    brew install bats-core
+    # Helper libraries are vendored as version-pinned git submodules.
+    git submodule update --init test/helpers/lib
 
 # Check required commands
 check-deps:
@@ -71,8 +73,20 @@ lint:
     set -euo pipefail
     shellcheck bin/* scripts/*.sh
 
+# Supply-chain guard: the Brewfile must use only the vetted homebrew/core tap.
+# Any `tap` directive pulls from a third-party repo and is rejected.
+check-brewfile:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if grep -qE '^[[:space:]]*tap[[:space:]]' Brewfile; then
+      printf '%s\n' "ERROR: Brewfile declares a third-party tap. Vendor the dependency as a pinned submodule instead." >&2
+      grep -nE '^[[:space:]]*tap[[:space:]]' Brewfile >&2
+      exit 1
+    fi
+    printf '%s\n' "Brewfile uses only homebrew/core (no third-party taps)."
+
 # Run static checks
-quality: format-check lint
+quality: format-check lint check-brewfile
 
 # Alias for quality
 q: quality
