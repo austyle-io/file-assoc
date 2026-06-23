@@ -78,9 +78,9 @@ lint:
 check-brewfile:
     #!/usr/bin/env bash
     set -euo pipefail
-    if grep -qE '^[[:space:]]*tap[[:space:]]' Brewfile; then
+    if grep -qE '^[[:space:]]*tap([[:space:]]|\()' Brewfile; then
       printf '%s\n' "ERROR: Brewfile declares a third-party tap. Vendor the dependency as a pinned submodule instead." >&2
-      grep -nE '^[[:space:]]*tap[[:space:]]' Brewfile >&2
+      grep -nE '^[[:space:]]*tap([[:space:]]|\()' Brewfile >&2
       exit 1
     fi
     printf '%s\n' "Brewfile uses only homebrew/core (no third-party taps)."
