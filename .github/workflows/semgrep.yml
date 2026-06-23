@@ -1,0 +1,63 @@
+# Semgrep SAST — static analysis for shell scripts, GitHub Actions, and secrets.
+# Tokenless: uses public Semgrep registry rulesets (no SEMGREP_APP_TOKEN required),
+# and runs on the runner (not the semgrep container) so JS actions and the SARIF
+# upload have Node available.
+# Non-gating: findings upload to the Security tab but do NOT block merges
+# (only "CodeRabbit" and "Quality gates" are required checks).
+name: Semgrep
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches:
+      - main
+    paths:
+      - "**.sh"
+      - "**.bash"
+      - "**.yml"
+      - "**.yaml"
+      - ".github/workflows/semgrep.yml"
+  schedule:
+    # random minute to avoid the top-of-hour Actions load spike
+    - cron: "49 0 * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: semgrep-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  semgrep:
+    name: semgrep/ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Install Semgrep (pinned)
+        run: pipx install semgrep==1.167.0
+
+      - name: Run Semgrep (SARIF)
+        # Non-gating: report findings without failing the check.
+        continue-on-error: true
+        run: |
+          semgrep scan \
+            --config p/bash \
+            --config p/github-actions \
+            --config p/secrets \
+            --sarif --output semgrep.sarif
+
+      - name: Upload SARIF to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4
+        with:
+          sarif_file: semgrep.sarif
