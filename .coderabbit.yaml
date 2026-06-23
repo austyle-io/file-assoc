@@ -1,53 +1,17 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# Shared CodeRabbit configuration for austyle-io repositories.
 language: en-US
-early_access: true
-enable_free_tier: false
-
+early_access: false
 reviews:
-  profile: assertive
-  auto_review:
-    enabled: true
-    drafts: true
-    base_branches:
-      - main
+  profile: chill
   request_changes_workflow: false
   high_level_summary: true
   poem: false
   review_status: true
-  collapse_walkthrough: false
-  path_instructions:
-    - path: "bin/**/*"
-      instructions: |
-        - Verify wrappers resolve the repository root relative to themselves.
-        - Check help text, argument forwarding, quoting, and exit codes.
-    - path: "scripts/**/*.sh"
-      instructions: |
-        - Review shell safety, cleanup traps, xattr/duti behavior, and macOS compatibility.
-        - Check that reset logic only removes com.apple.LaunchServices.OpenWith.
-        - Verify parallel processing and temporary-file handling are race-safe.
-    - path: "test/**/*.bats"
-      instructions: |
-        - Verify each test checks BOTH $status (assert_success/assert_failure) and $output.
-        - Require isolated sandboxes via _common_setup/_common_teardown; no real user-file mutation.
-        - Flag hollow assertions, skipped tests without reason, and pipes used with `run`.
-    - path: "test/helpers/**/*.bash"
-      instructions: |
-        - Verify helper loads bats-support/assert/file and derives PROJECT_ROOT from BASH_SOURCE.
-        - Ensure setup/teardown fully isolate and clean up the sandbox.
-    - path: "config/**/*"
-      instructions: |
-        - Verify duti mappings use valid bundle IDs, extensions, UTIs, and roles.
-    - path: ".github/workflows/*.yml"
-      instructions: |
-        - quality.yml is the gating CI ("Quality gates"): keep it scoped to shell formatting, linting, and integration tests.
-        - security-scanning.yml, semgrep.yml, and gitleaks.yml are intentionally non-gating defense-in-depth scanners (shellcheck, Trivy, TruffleHog, Semgrep, gitleaks); they may trigger on non-shell files and mirror the austdx-stack scanner set. (OWASP dependency-check was removed: file-assoc has only Homebrew deps, which it cannot analyze.)
-        - The bats helper libraries are vendored as version-pinned git submodules under test/helpers/lib/ to avoid third-party Homebrew taps. The Brewfile must contain no `tap` directives (enforced by `just check-brewfile`).
-        - Pin ALL actions — including first-party actions/* — to full commit SHAs with a trailing version comment, matching austdx-stack. Keep workflow token permissions least-privilege.
-  path_filters:
-    - "!**/*.log"
-    - "!**/.git/**"
-
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
 chat:
   auto_reply: true
-
-tone_instructions: "Shell security-first review: focus on macOS xattr/duti safety, strict-mode Bash correctness, quoting, and tests that avoid real user-file mutation."
