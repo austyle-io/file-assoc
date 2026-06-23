@@ -10,8 +10,15 @@
 
 set -euo pipefail
 
-# Determine script location (works with symlinks)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Determine the script's real location, following symlinks, so the wrapper can
+# be symlinked onto PATH (e.g. into ~/.local/bin) and still find the repo root.
+SOURCE="${BASH_SOURCE[0]}"
+while [[ -L "$SOURCE" ]]; do
+  dir="$(cd -P "$(dirname "$SOURCE")" > /dev/null 2>&1 && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ "$SOURCE" != /* ]] && SOURCE="$dir/$SOURCE"
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" > /dev/null 2>&1 && pwd)"
 FILE_ASSOC_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SCRIPT="$FILE_ASSOC_ROOT/scripts/reset-file-associations.sh"
 
