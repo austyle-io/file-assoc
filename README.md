@@ -31,13 +31,21 @@ brew bundle install --file=Brewfile
 
 ## Install
 
-Add this repo's `bin/` directory to your `PATH`, or invoke the scripts directly.
+From the repository root, symlink the command wrappers into a directory on your `PATH` (`~/.local/bin` is a common choice):
 
 ```bash path=null start=null
-export PATH="/Users/tyleraustin/Github/file-assoc/bin:$PATH"
+mkdir -p ~/.local/bin
+ln -sf "$PWD/bin/file-assoc-setup" ~/.local/bin/file-assoc-setup
+ln -sf "$PWD/bin/file-assoc-reset" ~/.local/bin/file-assoc-reset
 ```
 
-The wrappers resolve the repository root relative to their own location, so they work from anywhere and do not depend on `~/dotfiles`.
+If `~/.local/bin` is not already on your `PATH`, add it to your shell startup file:
+
+```bash path=null start=null
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+The wrappers resolve their real location through the symlink, so they work from anywhere and do not depend on `~/dotfiles`. Alternatively, add this repo's `bin/` directory to your `PATH`, or invoke the scripts directly.
 
 ## Usage
 
