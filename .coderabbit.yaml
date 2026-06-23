@@ -39,7 +39,9 @@ reviews:
         - Verify duti mappings use valid bundle IDs, extensions, UTIs, and roles.
     - path: ".github/workflows/*.yml"
       instructions: |
-        - Keep CI scoped to shell formatting, linting, and integration tests.
+        - quality.yml is the gating CI ("Quality gates"): keep it scoped to shell formatting, linting, and integration tests.
+        - security-scanning.yml intentionally performs broader, non-gating security scanning (shellcheck, Trivy filesystem/vulnerability scan, TruffleHog secret scan) and may trigger on non-shell files; this is expected and mirrors the austdx-stack security-scanner workflows.
+        - Pin third-party actions to full commit SHAs (with a version comment) and keep workflow token permissions least-privilege.
   path_filters:
     - "!**/*.log"
     - "!**/.git/**"
