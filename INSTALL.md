@@ -16,10 +16,18 @@ brew install bash bc duti
 
 ## 2. Add the commands to PATH
 
-Add this repo's `bin/` directory to your shell startup file:
+From the repository root, symlink the wrappers into a directory on your `PATH` (`~/.local/bin` is a common choice):
 
 ```bash path=null start=null
-export PATH="/Users/tyleraustin/Github/file-assoc/bin:$PATH"
+mkdir -p ~/.local/bin
+ln -sf "$PWD/bin/file-assoc-setup" ~/.local/bin/file-assoc-setup
+ln -sf "$PWD/bin/file-assoc-reset" ~/.local/bin/file-assoc-reset
+```
+
+If `~/.local/bin` is not already on your `PATH`, add it to your shell startup file:
+
+```bash path=null start=null
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
 Reload your shell, then verify:
