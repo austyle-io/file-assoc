@@ -1,0 +1,50 @@
+# Claude Code Review — runs the code-review plugin against every pull request
+# and posts its findings as a PR review.
+#
+# Advisory only: this check is NOT required and must never be made required.
+# A required AI review would block merges whenever the API key, quota, or the
+# action itself is unavailable.
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+
+jobs:
+  claude-review:
+    # Dependabot-triggered pull_request runs receive Dependabot secrets, not
+    # Actions secrets, so ANTHROPIC_API_KEY resolves empty there and the action
+    # fails auth on every dependabot PR. Skip the actor instead.
+    if: github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read # read the checked-out PR head
+      # write: the review is posted as PR review comments and issue comments;
+      # read-only scopes let the action run but not publish its findings.
+      pull-requests: write
+      issues: write
+      id-token: write # per claude-code-action's documented permission set
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Run Claude Code Review
+        id: claude-review
+        uses: anthropics/claude-code-action@756cc22e19660d20e8cc9496b4f242475a7f7790 # v1.0.235
+        with:
+          # Org-level Actions secret (visibility: all).
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Use the Actions GITHUB_TOKEN directly rather than the OIDC -> GitHub
+          # App token exchange.
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Allow CodeRabbit-triggered events (e.g. bot-initiated synchronize)
+          # to run the review; the action blocks bot actors by default.
+          allowed_bots: 'coderabbitai'
+          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
+          plugins: 'code-review@claude-code-plugins'
+          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
