@@ -9,7 +9,9 @@ reviews:
   poem: false
   review_status: true
   auto_review:
-    enabled: true
+    # Manual trigger only: comment `@coderabbitai review` (or `full review`) on a PR.
+    enabled: false
+    auto_incremental_review: false
     drafts: false
     base_branches:
       - main
