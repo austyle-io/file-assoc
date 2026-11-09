@@ -1,4 +1,5 @@
 # Dependabot configuration for automated dependency updates
+# Follows the austyle-io org policy (austyle-io/.github templates/dependabot.yml.md).
 # Documentation: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 
 version: 2
@@ -11,7 +12,9 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "09:00"
-      timezone: "UTC"
+      timezone: "America/Los_Angeles"
+    cooldown:
+      default-days: 3
     labels:
       - "dependencies"
       - "github-actions"
@@ -19,9 +22,44 @@ updates:
       prefix: "ci"
       include: "scope"
     open-pull-requests-limit: 5
-    # Group minor and patch updates together to reduce PR noise
+    # Minor and patch updates in one PR; majors stay ungrouped for human review
     groups:
-      github-actions-minor:
+      minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "gitsubmodule"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Los_Angeles"
+    cooldown:
+      default-days: 3
+    labels:
+      - "dependencies"
+    open-pull-requests-limit: 5
+    groups:
+      minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      security:
+        applies-to: security-updates
         patterns:
           - "*"
         update-types:
