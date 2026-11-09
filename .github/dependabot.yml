@@ -31,6 +31,26 @@ updates:
         update-types:
           - "minor"
           - "patch"
+  - package-ecosystem: "gitsubmodule"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Los_Angeles"
+    cooldown:
+      default-days: 3
+    labels:
+      - "dependencies"
+    open-pull-requests-limit: 5
+    groups:
+      minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
 # Note: Homebrew dependencies (Brewfile) are not currently supported by
 # Dependabot. Use 'brew update && brew outdated' manually instead.
