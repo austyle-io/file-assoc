@@ -1,0 +1,99 @@
+name: Claude Code
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    # `opened` only: at v1.0.247 the action acts on `assigned` solely for a
+    # configured assignee_trigger (none here), so an assignment would start a run
+    # that does nothing yet still occupies the job's concurrency group.
+    types: [opened]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  claude:
+    # Restrict @claude triggers to users with write access (OWNER, MEMBER, COLLABORATOR)
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') &&
+        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude') &&
+        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude') &&
+        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.review.author_association)) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')) &&
+        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.issue.author_association))
+    runs-on: ubuntu-latest
+    # Job level, not workflow level: a run whose `if` skips this job (any comment
+    # without @claude) never joins the group, so ordinary discussion cannot
+    # displace a waiting request. Within the group, GitHub keeps at most one
+    # running and ONE pending run: a second @claude request that arrives while
+    # one is pending replaces it (the newest instruction wins). cancel-in-progress
+    # is false, so a request never interrupts a run already editing the branch.
+    concurrency:
+      group: claude-${{ github.event.issue.number || github.event.pull_request.number }}
+      cancel-in-progress: false
+    # Bounded: a stuck run must not hold the group for the 6-hour default.
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      # Read-only: Claude posts through the App installation token minted from
+      # the job's OIDC token, so GITHUB_TOKEN never needs write.
+      pull-requests: read
+      issues: read
+      actions: read # Required for Claude to read CI results on PRs
+      id-token: write # the action fetches the job OIDC token for the App token exchange
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          # Keep the checkout credential here (do NOT add persist-credentials:
+          # false): in tag mode the action fetches the PR or source branch
+          # (setupBranch) BEFORE it installs its own App-token auth, so without a
+          # credential that fetch fails on private and internal repositories. The
+          # action then removes this GITHUB_TOKEN header and switches git to the
+          # App token before Claude starts (replaceCheckoutCredentials).
+
+      - name: Install subprocess isolation dependencies
+        # CLAUDE_CODE_SUBPROCESS_ENV_SCRUB (below) scrubs Anthropic, cloud and
+        # Actions secrets from the environment of commands Claude runs, and with
+        # bubblewrap + socat it also isolates them in a PID namespace. The action
+        # installs these only for allowed_non_write_users, so do it here; this
+        # mirrors the action's own step (action.yml at v1.0.247). Ubuntu 24.04+
+        # blocks the unprivileged user namespaces bubblewrap needs by default.
+        # Best-effort, like the action's: the scrub works without it.
+        continue-on-error: true
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends bubblewrap socat
+          if [ -f /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+
+      - name: Run Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@2dca132ff0e0c4094ce6048b422c6915a071210b # v1.0.247
+        env:
+          # @claude can run commands; keep the OAuth token and other secrets out
+          # of their environment (defence in depth; docs/security.md of the action).
+          CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # No github_token: the action trades the job's OIDC token for a Claude GitHub
+          # App installation token, so everything posts as claude[bot]. Requires the
+          # App installation to be linked to the Anthropic account (claude.ai onboarding).
+
+          # This is an optional setting that allows Claude to read CI results on PRs
+          additional_permissions: |
+            actions: read
+
+          # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
+          # prompt: 'Update the pull request description to include a summary of changes.'
+
+          # Optional: Add claude_args to customize behavior and configuration
+          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
+          # or https://code.claude.com/docs/en/cli-reference for available options
+          # claude_args: '--allowed-tools Bash(gh pr *)'
